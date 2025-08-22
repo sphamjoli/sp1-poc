@@ -1,0 +1,21 @@
+[package]
+name = "bridge-validator"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+exclude.workspace = true
+version.workspace = true
+
+[dependencies]
+alloy-sol-types = { workspace = true ,default-features = false}
+alloy-primitives = { workspace = true ,default-features = false}
+serde = { workspace = true,default-features = false }
+clap = { workspace = true }
+dotenv = { workspace = true ,default-features = false}
+hex = { workspace = true ,default-features = false}
+eyre = { workspace = true,default-features = false }
+tokio = { workspace = true ,default-features = false}
+serde_json = { workspace = true ,default-features = false}
+
+[lints]
+workspace = true

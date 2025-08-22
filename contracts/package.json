@@ -1,0 +1,23 @@
+{
+  "name": "contracts",
+  "version": "1.0.0",
+  "description": "This is a template for writing a contract that uses verification of [SP1](https://github.com/succinctlabs/sp1) PlonK proofs onchain using the [SP1VerifierGateway](https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/SP1VerifierGateway.sol).",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@solarity/solidity-lib": "^3.2.0",
+    "@types/node": "^24.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.0.4",
+    "viem": "^2.31.7"
+  }
+}

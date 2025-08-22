@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: bridge-indexer
+description: SP1 bridge indexer
+unordered_multichain_mode: true
+
+contracts:
+  - name: Bridge
+    handler: src/EventHandlers.ts
+    events:
+      - event: "Deposit(address indexed who, uint256 indexed amount, address indexed token, address to,uint256 sourceChain,uint256 destinationChain)"
+        field_selection:
+          transaction_fields:
+            - "hash"
+      - event: "Claimed(address indexed who, uint256 indexed amount, address indexed token,address to,uint256 sourceChain,bytes publicInputs,bytes proofBytes)"
+        field_selection:
+          transaction_fields:
+            - "hash"
+
+networks:
+  - id: 1 # Ethereum Mainnet
+    rpc_config:
+      url: http://host.docker.internal:8545
+    start_block: 22985155
+    contracts:
+      - name: Bridge
+        address: "0x3860B063928436F548c3A58A40c4d1d171E78838"
+  - id: 8453 # Base Mainnet
+    rpc_config:
+      url: http://host.docker.internal:8546
+    start_block: 33262239
+    contracts:
+      - name: Bridge
+        address: "0xa0895076F3bDC96b9f7be96c3e3Fc07F11E128d7"

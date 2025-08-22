@@ -1,0 +1,82 @@
+[workspace]
+members = ["crates/bridge-lib", "crates/bridge-program", "crates/bridge-script", "crates/bridge-validator"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["brianspha"]
+exclude = ["**/target"]
+version = "0.1.0"
+
+[workspace.dependencies]
+eyre = { version = "0.6", default-features = false }
+tracing = { version = "0.1.40", default-features = false }
+tokio = { version = "1.40.0", default-features = false, features = [
+  "rt",
+  "rt-multi-thread",
+] }
+serde_json = { version = "1.0.94", default-features = false, features = [
+  "alloc",
+] }
+serde = { version = "1.0.210", default-features = false, features = ["derive"] }
+reqwest = { version = "0.12.15", default-features = false }
+url = { version = "2.3", default-features = false }
+hex-literal = { version = "0.4.1", default-features = false }
+bincode = { version = "1.3.3", default-features = false }
+dotenv = { version = "0.15.0", default-features = false }
+thiserror = { version = "2.0.12", default-features = false }
+futures = { version = "0.3.31", default-features = false }
+
+# Database dependencies
+mongodb = { version = "3.2.4", features = [
+  "sync",
+  "rustls-tls",
+  "compat-3-0-0",
+] }
+
+# SP1 dependencies
+sp1-sdk = { version = "5.0.0", default-features = false }
+sp1-zkvm = { version = "5.0.0", default-features = false }
+sp1-build = { version = "5.0.0", default-features = false }
+
+# Alloy dependencies
+alloy-primitives = { version = "1.0", default-features = false }
+alloy-consensus = { version = "0.14.0", default-features = false }
+alloy-contract = { version = "0.14.0", default-features = false }
+alloy-eips = { version = "0.14.0", default-features = false }
+alloy-node-bindings = { version = "0.14.0", default-features = false }
+alloy-provider = { version = "0.14.0", default-features = false, features = [
+  "reqwest",
+] }
+alloy-rpc-types = { version = "0.14.0", default-features = false, features = [
+  "eth",
+] }
+alloy-rpc-types-eth = { version = "0.14.0", default-features = false }
+alloy-serde = { version = "0.14.0", default-features = false }
+alloy-transport = { version = "0.14.0", default-features = false }
+alloy-rlp = { version = "0.3.10", default-features = false }
+alloy-trie = { version = "0.8.1", default-features = false }
+alloy-sol-macro = { version = "1.0", default-features = false }
+alloy = { version = "0.14.0", default-features = false }
+alloy-evm = { version = "0.4.0", default-features = false }
+alloy-op-evm = { version = "0.4.0", default-features = false }
+alloy-sol-types = { version = "1.2.1", default-features = false }
+
+# misc
+clap = { version = "4.5.41", features = ["derive", "env"] }
+hex = { version = "0.4.3", default-features = false }
+gql_client = { version = "1.0.8", default-features = false }
+sha3 = { version = "0.10.8" }
+
+# crates
+bridge-lib = { path = "crates/bridge-lib", default-features = false }
+bridge-program = { path = "crates/bridge-program" }
+bridge-script = { path = "crates/bridge-script" }
+
+[workspace.lints]
+rust.missing_debug_implementations = "warn"
+rust.unreachable_pub = "warn"
+rust.unused_must_use = "deny"
+rust.rust_2018_idioms = { level = "deny", priority = -1 }
+rustdoc.all = "warn"

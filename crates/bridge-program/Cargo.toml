@@ -1,0 +1,13 @@
+[package]
+name = "bridge-program"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+exclude.workspace = true
+version.workspace = true
+
+[dependencies]
+sp1-zkvm = { workspace = true, default-features = true }
+alloy-sol-types = { workspace = true }
+alloy-primitives = { workspace = true }
+serde = { workspace = true }

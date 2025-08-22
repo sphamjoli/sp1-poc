@@ -1,0 +1,176 @@
+type User {
+  # The user's address as the unique identifier
+  id: ID!
+  # Total number of deposits made by this user
+  depositCount: Int!
+  # Total number of claims made by this user  
+  claimCount: Int!
+  # List of all deposits made by this user
+  deposits: [Deposit!]! @derivedFrom(field: "user_id")
+  # List of all claims made by this user
+  claims: [Claim!]! @derivedFrom(field: "user_id")
+  # Total value deposited by this user in native token units
+  totalDeposited: BigInt!
+  # Total value claimed by this user in native token units
+  totalClaimed: BigInt!
+  # Timestamp of first deposit (if any)
+  firstDepositAt: BigInt
+  # Timestamp of last activity
+  lastActivityAt: BigInt!
+}
+
+type Token {
+  # Token contract address (0x0000000000000000000000000000000000000000 for native ETH)
+  id: ID!
+  # Token symbol (ETH, USDC, WETH, etc.)
+  symbol: String!
+  # Token name (Ethereum, USD Coin, Wrapped Ether, etc.)
+  name: String!
+  # Token decimals (18 for ETH, 6 for USDC, etc.)
+  decimals: Int!
+  # Total amount deposited for this token across all users
+  totalDeposited: BigInt!
+  # Total amount claimed for this token across all users
+  totalClaimed: BigInt!
+  # Current bridge balance (deposited - claimed)
+  bridgeBalance: BigInt!
+  # List of all deposits for this token
+  deposits: [Deposit!]! @derivedFrom(field: "token_id")
+  # List of all claims for this token
+  claims: [Claim!]! @derivedFrom(field: "token_id")
+  # Number of unique users who deposited this token
+  uniqueDepositors: Int!
+  # Number of unique users who claimed this token
+  uniqueClaimers: Int!
+  # Whether this token is currently supported for bridging
+  isActive: Boolean!
+}
+
+type Deposit {
+  # Unique identifier: transaction_hash + log_index
+  id: ID!
+  # User who made the deposit (foreign key)
+  user_id: String!
+  # Amount deposited in token's smallest unit
+  amount: BigInt!
+  # Token that was deposited (foreign key)
+  token_id: String!
+  # Recipient address on destination chain
+  to: String!
+  # Destination chain identifier (optional)
+  destinationChain: BigInt
+  # Transaction hash where deposit occurred
+  transactionHash: String!
+  # Block number where deposit occurred
+  blockNumber: BigInt!
+  # Block timestamp in seconds
+  timestamp: BigInt!
+  # Log index within the transaction
+  logIndex: Int!
+  # Gas price used for the transaction
+  gasPrice: BigInt
+  # Gas used by the transaction
+  gasUsed: BigInt
+  # Whether this deposit has been successfully claimed (derived from existence of claims)
+  isClaimed: Boolean!
+  # List of claims that reference this deposit (usually 0 or 1)
+  claims: [Claim!]! @derivedFrom(field: "deposit_id")
+  # Chain ID where this deposit occurred
+  sourceChain: BigInt!
+}
+
+type Claim {
+  # Unique identifier: transaction_hash + log_index
+  id: ID!
+  # User who made the claim (foreign key)
+  user_id: String!
+  # Amount claimed in token's smallest unit
+  amount: BigInt!
+  # Token that was claimed (foreign key)
+  token_id: String!
+  # Address that received the claimed tokens
+  to: String!
+  # Transaction hash of the claim transaction
+  transactionHash: String!
+  # Block number where claim occurred
+  blockNumber: BigInt!
+  # Block timestamp in seconds
+  timestamp: BigInt!
+  # Log index within the transaction
+  logIndex: Int!
+  # Gas price used for the claim transaction
+  gasPrice: BigInt
+  # Gas used by the claim transaction
+  gasUsed: BigInt
+  # SP1 proof bytes used for verification (hex string)
+  proofBytes: String!
+  # SP1 public inputs used for verification (hex string)
+  publicInputs: String!
+  # Reference to original deposit (only if claim includes deposit reference data)
+  deposit_id: String
+  # Chain ID where the original deposit occurred
+  sourceChain: BigInt
+  # Chain ID where this claim occurred
+  destinationChain: BigInt!
+}
+
+type BridgeStats {
+  # Singleton entity ID
+  id: ID!
+  # Total number of deposits across all chains and tokens
+  totalDeposits: Int!
+  # Total number of claims across all chains and tokens
+  totalClaims: Int!
+  # Total number of unique users who have used the bridge
+  uniqueUsers: Int!
+  # Number of supported tokens across all chains
+  supportedTokens: Int!
+  # Total value bridged (sum of all deposits)
+  totalVolumeBridged: BigInt!
+  # Number of active chains supported
+  activeChains: Int!
+  # Last updated timestamp
+  lastUpdated: BigInt!
+}
+
+type DailyStats {
+  # Date in YYYY-MM-DD format
+  id: ID!
+  # Unix timestamp for start of day (00:00:00 UTC)
+  date: BigInt!
+  # Number of deposits on this day
+  dailyDeposits: Int!
+  # Number of claims on this day
+  dailyClaims: Int!
+  # Number of unique users active on this day
+  dailyActiveUsers: Int!
+  # Total volume bridged on this day
+  dailyVolume: BigInt!
+  # Number of new users (first-time depositors) on this day
+  newUsers: Int!
+  # Average gas price for deposits on this day
+  avgDepositGasPrice: BigInt
+  # Average gas price for claims on this day
+  avgClaimGasPrice: BigInt
+}
+
+type ChainStats {
+  # Chain ID as identifier
+  id: ID!
+  # Human readable chain name (Ethereum, Polygon, Arbitrum, etc.)
+  name: String!
+  # Total deposits originated from this chain
+  totalDeposits: Int!
+  # Total claims made on this chain
+  totalClaims: Int!
+  # Total volume deposited from this chain
+  totalVolumeDeposited: BigInt!
+  # Total volume claimed on this chain
+  totalVolumeClaimed: BigInt!
+  # Number of unique users who deposited from this chain
+  uniqueDepositors: Int!
+  # Number of unique users who claimed on this chain
+  uniqueClaimers: Int!
+  # Whether this chain is currently active for bridging
+  isActive: Boolean!
+}

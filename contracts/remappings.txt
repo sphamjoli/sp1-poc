@@ -1,0 +1,6 @@
+@sp1-contracts/=./lib/sp1-contracts/contracts/src/
+@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
+@solarity/solidity-lib=node_modules/@solarity/solidity-lib
+solady=./lib/solady/src
+solbls=./lib/solbls/src
