@@ -41,7 +41,11 @@ contract AddressReader is Script {
     /// @return tokenA Token A address
     /// @return tokenB Token B address
     /// @return bridge Bridge address
-    function readAllAddresses(uint256 chainId) external view returns (address tokenA, address tokenB, address bridge) {
+    function readAllAddresses(uint256 chainId)
+        external
+        view
+        returns (address tokenA, address tokenB, address bridge)
+    {
         string memory json = _readDeploymentFile(chainId);
 
         tokenA = vm.parseJsonAddress(json, ".addresses.tokenA");
@@ -132,7 +136,10 @@ contract AddressReader is Script {
     /// @param chainId The chain ID
     /// @param contractKey The contract identifier
     /// @return contractAddress The contract address
-    function _readContractAddress(uint256 chainId, string memory contractKey)
+    function _readContractAddress(
+        uint256 chainId,
+        string memory contractKey
+    )
         internal
         view
         returns (address contractAddress)

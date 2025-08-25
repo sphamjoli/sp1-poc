@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {StakeManagerTypes} from "./StakeManagerTypes.sol";
+import {IStakeManagerTypes} from "./IStakeManagerTypes.sol";
 
 /// @title StakeManagerStorage
+/// @author brianspha
 /// @notice Abstract storage layer for Staking operations
-abstract contract StakeManagerStorage is StakeManagerTypes {
+abstract contract StakeManagerStorage is IStakeManagerTypes {
     /// @dev Protects unauthorised calls not made by the ValidatorManager contract
     modifier onlyStakeManager() {
         require(msg.sender == STAKE_MANAGER, NotStakeManager());

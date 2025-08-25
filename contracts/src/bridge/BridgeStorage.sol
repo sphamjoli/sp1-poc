@@ -95,14 +95,22 @@ abstract contract BridgeStorage is IBridgeUtils {
     /// @notice Generate proof for a deposit
     /// @param depositIndex Index of the deposit
     /// @return proof Merkle proof for the deposit
-    function generateDepositProof(uint256 depositIndex) internal view returns (SparseMerkleTree.Proof memory proof) {
+    function generateDepositProof(uint256 depositIndex)
+        internal
+        view
+        returns (SparseMerkleTree.Proof memory proof)
+    {
         return depositTree.getProof(depositIndex);
     }
 
     /// @notice Generate proof for a claim
     /// @param claimIndex Index of the claim
     /// @return proof Merkle proof for the claim
-    function generateClaimProof(uint256 claimIndex) internal view returns (SparseMerkleTree.Proof memory proof) {
+    function generateClaimProof(uint256 claimIndex)
+        internal
+        view
+        returns (SparseMerkleTree.Proof memory proof)
+    {
         return claimTree.getProof(claimIndex);
     }
 
@@ -110,7 +118,11 @@ abstract contract BridgeStorage is IBridgeUtils {
     /// @param depositIndex Index to check
     /// @return exists Whether the deposit exists
     /// @return value The deposit leaf value
-    function checkDepositExists(uint256 depositIndex) internal view returns (bool exists, bytes32 value) {
+    function checkDepositExists(uint256 depositIndex)
+        internal
+        view
+        returns (bool exists, bytes32 value)
+    {
         return depositTree.checkLeafExists(depositIndex);
     }
 
@@ -118,7 +130,11 @@ abstract contract BridgeStorage is IBridgeUtils {
     /// @param claimIndex Index to check
     /// @return exists Whether the claim exists
     /// @return value The claim leaf value
-    function checkClaimExists(uint256 claimIndex) internal view returns (bool exists, bytes32 value) {
+    function checkClaimExists(uint256 claimIndex)
+        internal
+        view
+        returns (bool exists, bytes32 value)
+    {
         return claimTree.checkLeafExists(claimIndex);
     }
 
@@ -144,7 +160,14 @@ abstract contract BridgeStorage is IBridgeUtils {
     /// @param sourceChain Source chain ID
     /// @param depositIndex Deposit index to check
     /// @return isClaimed Whether the deposit has been claimed
-    function isDepositClaimed(uint256 sourceChain, uint256 depositIndex) internal view returns (bool isClaimed) {
+    function isDepositClaimed(
+        uint256 sourceChain,
+        uint256 depositIndex
+    )
+        internal
+        view
+        returns (bool isClaimed)
+    {
         bytes32 claimKey = keccak256(abi.encodePacked(sourceChain, depositIndex));
         Storage storage $ = loadStorage();
         return $.claimed[claimKey];

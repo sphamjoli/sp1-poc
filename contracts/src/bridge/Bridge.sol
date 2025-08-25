@@ -5,7 +5,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {PausableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {BridgeStorage} from "./BridgeStorage.sol";
 import {IBridge} from "./IBridge.sol";
 import {LocalExitTreeLib, SparseMerkleTree} from "../libs/LocalExitTreeLib.sol";
@@ -14,7 +15,14 @@ import {LocalExitTreeLib, SparseMerkleTree} from "../libs/LocalExitTreeLib.sol";
 /// @author brianspha
 /// @notice Cross-chain bridge implementation with symmetric tree architecture
 /// @dev Handles both deposits (source chain) and claims (destination chain)
-contract Bridge is IBridge, BridgeStorage, Initializable, OwnableUpgradeable, UUPSUpgradeable, PausableUpgradeable {
+contract Bridge is
+    IBridge,
+    BridgeStorage,
+    Initializable,
+    OwnableUpgradeable,
+    UUPSUpgradeable,
+    PausableUpgradeable
+{
     using LocalExitTreeLib for SparseMerkleTree.Bytes32SMT;
 
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable constructor
@@ -38,7 +46,10 @@ contract Bridge is IBridge, BridgeStorage, Initializable, OwnableUpgradeable, UU
     /// @inheritdoc IBridge
     function deposit(DepositParams calldata depositParams) external payable whenNotPaused {
         require(depositParams.amount > 0, InvalidTransaction());
-        require(depositParams.destinationChain != CHAIN_ID, SameChainTransfer(depositParams.destinationChain));
+        require(
+            depositParams.destinationChain != CHAIN_ID,
+            SameChainTransfer(depositParams.destinationChain)
+        );
 
         if (depositParams.token == address(0)) {
             require(msg.value == depositParams.amount, InvalidTransaction());
@@ -92,7 +103,7 @@ contract Bridge is IBridge, BridgeStorage, Initializable, OwnableUpgradeable, UU
             !isDepositClaimed(claimParams.originChain, claimParams.depositIndex),
             AlreadyClaimed(claimParams.originChain, claimParams.depositIndex)
         );
-        //    require(msg.sender == claimParams.to, InvalidTransaction());
+        require(msg.sender == claimParams.to, InvalidTransaction());
 
         DepositParams memory originalDeposit = DepositParams({
             amount: claimParams.amount,
@@ -102,7 +113,9 @@ contract Bridge is IBridge, BridgeStorage, Initializable, OwnableUpgradeable, UU
         });
 
         bytes32 expectedLeaf = LocalExitTreeLib.computeExitLeaf(originalDeposit);
-        require(claimParams.proof.value == expectedLeaf, InvalidMerkleProof(claimParams.depositIndex));
+        require(
+            claimParams.proof.value == expectedLeaf, InvalidMerkleProof(claimParams.depositIndex)
+        );
         require(claimParams.proof.existence, InvalidMerkleProof(claimParams.depositIndex));
         require(
             !_verifyProofAgainstRoot(claimParams.proof, claimParams.sourceRoot),
@@ -125,7 +138,10 @@ contract Bridge is IBridge, BridgeStorage, Initializable, OwnableUpgradeable, UU
         (bytes32 claimRoot, uint256 claimIndex) = __addToClaimTree(claimLeaf);
 
         if (claimParams.token == address(0)) {
-            require(address(this).balance > claimParams.amount, InsufficientBalance(address(0), claimParams.amount));
+            require(
+                address(this).balance > claimParams.amount,
+                InsufficientBalance(address(0), claimParams.amount)
+            );
 
             (bool success,) = claimParams.to.call{value: claimParams.amount}("");
             require(success, ClaimFailed(address(0), claimParams.to, claimParams.amount));
@@ -166,7 +182,10 @@ contract Bridge is IBridge, BridgeStorage, Initializable, OwnableUpgradeable, UU
     /// @param proof Merkle proof to verify
     /// @param root Root hash to verify against
     /// @return valid Whether the proof is valid against the root
-    function _verifyProofAgainstRoot(SparseMerkleTree.Proof memory proof, bytes32 root)
+    function _verifyProofAgainstRoot(
+        SparseMerkleTree.Proof memory proof,
+        bytes32 root
+    )
         internal
         pure
         returns (bool valid)
@@ -204,7 +223,9 @@ contract Bridge is IBridge, BridgeStorage, Initializable, OwnableUpgradeable, UU
         require(to != address(0), ZeroAddress());
 
         IERC20 tokenContract = IERC20(token);
-        require(tokenContract.balanceOf(address(this)) >= amount, InsufficientBalance(token, amount));
+        require(
+            tokenContract.balanceOf(address(this)) >= amount, InsufficientBalance(token, amount)
+        );
         require(tokenContract.transfer(to, amount), ClaimFailed(token, to, amount));
     }
 

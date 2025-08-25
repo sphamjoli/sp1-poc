@@ -16,8 +16,12 @@ contract LocalExitTreeLibTest is BridgeBaseTest {
     function test_SimpleDeposit() public {
         vm.selectFork(FORKA_ID);
         uint256 depositIndex = 0;
-        DepositParams memory params =
-            DepositParams({amount: 1 ether, to: bob, destinationChain: CHAINB_ID, token: address(TOKEN_CHAINA)});
+        DepositParams memory params = DepositParams({
+            amount: 1 ether,
+            to: bob,
+            destinationChain: CHAINB_ID,
+            token: address(TOKEN_CHAINA)
+        });
         bytes32 exitLeaf = LocalExitTreeLib.computeExitLeaf(params);
         treeA.addDeposit(depositIndex, exitLeaf);
         SparseMerkleTree.Proof memory proof = treeA.getProof(depositIndex);
@@ -29,11 +33,19 @@ contract LocalExitTreeLibTest is BridgeBaseTest {
     function test_SimpleDeposit_Duplicate() public {
         vm.selectFork(FORKA_ID);
         uint256 depositIndex = 0;
-        DepositParams memory params =
-            DepositParams({amount: 1 ether, to: bob, destinationChain: CHAINB_ID, token: address(TOKEN_CHAINA)});
+        DepositParams memory params = DepositParams({
+            amount: 1 ether,
+            to: bob,
+            destinationChain: CHAINB_ID,
+            token: address(TOKEN_CHAINA)
+        });
         bytes32 exitLeaf = LocalExitTreeLib.computeExitLeaf(params);
         treeA.addDeposit(depositIndex, exitLeaf);
-        vm.expectRevert(abi.encodeWithSelector(SparseMerkleTree.KeyAlreadyExists.selector, bytes32(depositIndex)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SparseMerkleTree.KeyAlreadyExists.selector, bytes32(depositIndex)
+            )
+        );
         treeA.addDeposit(depositIndex, exitLeaf);
     }
 

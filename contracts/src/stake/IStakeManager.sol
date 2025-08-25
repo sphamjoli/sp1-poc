@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {StakeManagerTypes} from "./StakeManagerTypes.sol";
+import {IStakeManagerTypes} from "./IStakeManagerTypes.sol";
 
 /// @title Stake Manager Interface
 /// @author brianspha
 /// @notice Interface for managing validator stakes and rewards in a bridge validation system
 /// @dev Implements a modular staking system with BLS signature support and epoch-based rewards
-interface IStakeManager is StakeManagerTypes {
+interface IStakeManager is IStakeManagerTypes {
     /// @notice Initialize the stake manager with configuration and validator manager
     /// @param config Initial staking configuration parameters
     /// @param manager Address of the validator manager contract
@@ -21,7 +21,7 @@ interface IStakeManager is StakeManagerTypes {
     function stake(StakeParams calldata params, BlsOwnerShip memory proof) external;
 
     /// @notice Begin the unstaking process for a validator
-    /// @param params see {StakeManagerTypes.UnstakingParams}
+    /// @param params see {IStakeManagerTypes.UnstakingParams}
     function beginUnstaking(UnstakingParams memory params) external;
 
     /// @notice Complete unstaking and withdraw tokens after cooldown period
@@ -47,7 +47,10 @@ interface IStakeManager is StakeManagerTypes {
     /// @notice Calculate stake version hash for given configuration
     /// @param config Configuration to hash
     /// @return version Deterministic hash of the configuration
-    function getStakeVersion(StakeManagerConfig calldata config) external pure returns (bytes32 version);
+    function getStakeVersion(StakeManagerConfig calldata config)
+        external
+        pure
+        returns (bytes32 version);
 
     /// @notice Distribute rewards to active validators
     /// @param params Reward distribution parameters containing total amount and recipients
@@ -57,4 +60,20 @@ interface IStakeManager is StakeManagerTypes {
     /// @notice Claim accumulated rewards as a validator
     /// @dev Transfers all pending rewards to the caller
     function claimRewards() external;
+
+    /// @notice Allows for pausing contract operations
+    /// @dev OnlyOwner can make this call
+    function pause() external;
+
+    /// @notice Allows for unpausing of contract operations
+    /// @dev OnlyOwner can make this call
+    function unPause() external;
+
+    /// @notice Hash proof of possession message to curve point
+    /// @param blsPubkey The BLS public key to prove possession of
+    /// @return The message hashed to a curve point for BLS verification
+    function proofOfPossessionMessage(uint256[4] memory blsPubkey)
+        external
+        view
+        returns (uint256[2] memory);
 }

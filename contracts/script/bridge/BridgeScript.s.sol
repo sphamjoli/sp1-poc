@@ -18,7 +18,8 @@ contract BridgeDeployScript is Script, JsonDeploymentHandler, IBridgeUtils {
     using StringUtil for uint256;
 
     /// @notice Program verification key for SP1 verifier
-    bytes32 public constant PROGRAM_VKEY = hex"005a0f7559959ae95bb66f020e3d30b7b091755fb43e911dd8b967c901489a83";
+    bytes32 public constant PROGRAM_VKEY =
+        hex"005a0f7559959ae95bb66f020e3d30b7b091755fb43e911dd8b967c901489a83";
 
     /// @notice SP1 verifier gateway address
     address public constant SP1_VERIFIER_GATEWAY = 0x397A5f7f3dBd538f23DE225B51f532c34448dA9B;
@@ -67,7 +68,8 @@ contract BridgeDeployScript is Script, JsonDeploymentHandler, IBridgeUtils {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        (string memory nameA, string memory symbolA, string memory nameB, string memory symbolB) = _getTokenMetadata();
+        (string memory nameA, string memory symbolA, string memory nameB, string memory symbolB) =
+            _getTokenMetadata();
 
         tokenA = new BridgeToken(nameA, symbolA);
         tokenB = new BridgeToken(nameB, symbolB);
@@ -75,8 +77,9 @@ contract BridgeDeployScript is Script, JsonDeploymentHandler, IBridgeUtils {
         tokenA.mint(deployer, DEFAULT_TOKEN_SUPPLY);
         tokenB.mint(deployer, DEFAULT_TOKEN_SUPPLY);
 
-        address bridgeAddress =
-            Upgrades.deployUUPSProxy("Bridge.sol", abi.encodeCall(Bridge.initialize, (deployer)), options);
+        address bridgeAddress = Upgrades.deployUUPSProxy(
+            "Bridge.sol", abi.encodeCall(Bridge.initialize, (deployer)), options
+        );
         bridge = Bridge(payable(bridgeAddress));
 
         vm.stopBroadcast();
@@ -100,7 +103,12 @@ contract BridgeDeployScript is Script, JsonDeploymentHandler, IBridgeUtils {
     function _getTokenMetadata()
         internal
         view
-        returns (string memory nameA, string memory symbolA, string memory nameB, string memory symbolB)
+        returns (
+            string memory nameA,
+            string memory symbolA,
+            string memory nameB,
+            string memory symbolB
+        )
     {
         uint256 currentChainId = block.chainid;
 
@@ -119,11 +127,21 @@ contract BridgeDeployScript is Script, JsonDeploymentHandler, IBridgeUtils {
         } else if (currentChainId == 42161) {
             return ("Arbitrum Bridge Token A", "ABTA", "Arbitrum Bridge Token B", "ABTB");
         } else if (currentChainId == 421614) {
-            return ("Arbitrum Sepolia Bridge Token A", "ASBTA", "Arbitrum Sepolia Bridge Token B", "ASBTB");
+            return (
+                "Arbitrum Sepolia Bridge Token A",
+                "ASBTA",
+                "Arbitrum Sepolia Bridge Token B",
+                "ASBTB"
+            );
         } else if (currentChainId == 10) {
             return ("Optimism Bridge Token A", "OBTA", "Optimism Bridge Token B", "OBTB");
         } else if (currentChainId == 11155420) {
-            return ("Optimism Sepolia Bridge Token A", "OSBTA", "Optimism Sepolia Bridge Token B", "OSBTB");
+            return (
+                "Optimism Sepolia Bridge Token A",
+                "OSBTA",
+                "Optimism Sepolia Bridge Token B",
+                "OSBTB"
+            );
         } else {
             string memory chainIdStr = currentChainId.toString();
             return (
@@ -172,7 +190,10 @@ contract BridgeDeployScript is Script, JsonDeploymentHandler, IBridgeUtils {
             address deployedTokenB = vm.parseJsonAddress(json, ".addresses.tokenB");
             address deployedBridge = vm.parseJsonAddress(json, ".addresses.bridge");
 
-            if (deployedTokenA == address(0) || deployedTokenB == address(0) || deployedBridge == address(0)) {
+            if (
+                deployedTokenA == address(0) || deployedTokenB == address(0)
+                    || deployedBridge == address(0)
+            ) {
                 console.log("Verification FAILED: Zero addresses found");
                 return false;
             }
@@ -192,7 +213,10 @@ contract BridgeDeployScript is Script, JsonDeploymentHandler, IBridgeUtils {
     /// @return tokenAAddr Address of token A
     /// @return tokenBAddr Address of token B
     /// @return bridgeAddr Address of bridge
-    function getDeployedAddresses() external returns (address tokenAAddr, address tokenBAddr, address bridgeAddr) {
+    function getDeployedAddresses()
+        external
+        returns (address tokenAAddr, address tokenBAddr, address bridgeAddr)
+    {
         _readDeployment();
         return (_readAddress("tokenA"), _readAddress("tokenB"), _readAddress("bridge"));
     }

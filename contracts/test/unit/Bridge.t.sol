@@ -9,8 +9,12 @@ contract BridgeTest is BridgeBaseTest {
         vm.selectFork(FORKA_ID);
         vm.startPrank(spha);
         assert(TOKEN_CHAINA.approve(address(CHAINA), type(uint256).max));
-        DepositParams memory deposit =
-            DepositParams({amount: 10 ether, token: address(TOKEN_CHAINA), to: jenifer, destinationChain: CHAINB_ID});
+        DepositParams memory deposit = DepositParams({
+            amount: 10 ether,
+            token: address(TOKEN_CHAINA),
+            to: jenifer,
+            destinationChain: CHAINB_ID
+        });
         vm.expectEmit(true, true, false, true, address(CHAINA));
         //emit Deposit(spha, 10 ether, address(TOKEN_CHAINA), jenifer, CHAINA_ID, CHAINB_ID);
         CHAINA.deposit(deposit);
@@ -21,8 +25,12 @@ contract BridgeTest is BridgeBaseTest {
         vm.selectFork(FORKB_ID);
         vm.startPrank(spha);
         assert(TOKEN_CHAINB.approve(address(CHAINB), type(uint256).max));
-        DepositParams memory deposit =
-            DepositParams({amount: 10 ether, token: address(TOKEN_CHAINB), to: jenifer, destinationChain: CHAINA_ID});
+        DepositParams memory deposit = DepositParams({
+            amount: 10 ether,
+            token: address(TOKEN_CHAINB),
+            to: jenifer,
+            destinationChain: CHAINA_ID
+        });
         vm.expectEmit(true, true, false, true, address(CHAINB));
         //emit Deposit(spha, 10 ether, address(TOKEN_CHAINB), jenifer, CHAINB_ID, CHAINA_ID);
         CHAINA.deposit(deposit);

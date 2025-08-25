@@ -31,7 +31,9 @@ abstract contract JsonDeploymentHandler is Script {
     string internal constant DEPLOY_DIR = "./deploy-out/";
 
     /// @notice Events for deployment tracking
-    event ContractDeployed(string indexed contractName, address indexed contractAddress, uint256 indexed chainId);
+    event ContractDeployed(
+        string indexed contractName, address indexed contractAddress, uint256 indexed chainId
+    );
     event DeploymentFileCreated(string indexed fileName, uint256 indexed chainId);
 
     /// @notice Constructor to initialize deployment handler

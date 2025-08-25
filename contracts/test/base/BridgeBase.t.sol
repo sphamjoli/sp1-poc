@@ -15,7 +15,8 @@ abstract contract BridgeBaseTest is Test, IBridgeUtils {
     using SparseMerkleTree for SparseMerkleTree.Bytes32SMT;
 
     /// @notice Program verification key for SP1 verifier
-    bytes32 public constant PROGRAM_VKEY = hex"005a0f7559959ae95bb66f020e3d30b7b091755fb43e911dd8b967c901489a83";
+    bytes32 public constant PROGRAM_VKEY =
+        hex"005a0f7559959ae95bb66f020e3d30b7b091755fb43e911dd8b967c901489a83";
 
     /// @notice Test user addresses
     address public alice;
@@ -93,8 +94,9 @@ abstract contract BridgeBaseTest is Test, IBridgeUtils {
 
         TOKEN_CHAINA.mint(owner, defaultOwnerTokenBalance);
 
-        address bridgeChainA =
-            Upgrades.deployUUPSProxy("Bridge.sol", abi.encodeCall(Bridge.initialize, (owner)), options);
+        address bridgeChainA = Upgrades.deployUUPSProxy(
+            "Bridge.sol", abi.encodeCall(Bridge.initialize, (owner)), options
+        );
         CHAINA = Bridge(payable(bridgeChainA));
         CHAINA_ID = block.chainid;
         treeA.initialize();
@@ -108,8 +110,9 @@ abstract contract BridgeBaseTest is Test, IBridgeUtils {
 
         TOKEN_CHAINB.mint(owner, defaultOwnerTokenBalance);
 
-        address bridgeChainB =
-            Upgrades.deployUUPSProxy("Bridge.sol", abi.encodeCall(Bridge.initialize, (owner)), options);
+        address bridgeChainB = Upgrades.deployUUPSProxy(
+            "Bridge.sol", abi.encodeCall(Bridge.initialize, (owner)), options
+        );
         CHAINB = Bridge(payable(bridgeChainB));
         CHAINB_ID = block.chainid;
         treeB.initialize();
@@ -159,7 +162,13 @@ abstract contract BridgeBaseTest is Test, IBridgeUtils {
         return user;
     }
 
-    function _createUserWithTokenBalance(string memory name, BridgeToken token) internal returns (address payable) {
+    function _createUserWithTokenBalance(
+        string memory name,
+        BridgeToken token
+    )
+        internal
+        returns (address payable)
+    {
         vm.startPrank(owner);
         address payable user = payable(makeAddr(name));
         vm.deal({account: user, newBalance: 1000 ether});

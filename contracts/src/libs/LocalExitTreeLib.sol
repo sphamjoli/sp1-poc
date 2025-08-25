@@ -29,7 +29,11 @@ library LocalExitTreeLib {
     /// @param depositIndex The deposit index (used as key)
     /// @param exitLeaf The exit leaf hash (used as value)
     /// @return newRoot The new root after insertion
-    function addDeposit(SparseMerkleTree.Bytes32SMT storage tree, uint256 depositIndex, bytes32 exitLeaf)
+    function addDeposit(
+        SparseMerkleTree.Bytes32SMT storage tree,
+        uint256 depositIndex,
+        bytes32 exitLeaf
+    )
         internal
         returns (bytes32 newRoot)
     {
@@ -43,7 +47,11 @@ library LocalExitTreeLib {
     /// @param startIndex Starting deposit index ideally the deposit/claim count
     /// @param exitLeaves Array of exit leaves to add
     /// @return newRoot The new root after all insertions
-    function batchAddDeposits(SparseMerkleTree.Bytes32SMT storage tree, uint256 startIndex, bytes32[] memory exitLeaves)
+    function batchAddDeposits(
+        SparseMerkleTree.Bytes32SMT storage tree,
+        uint256 startIndex,
+        bytes32[] memory exitLeaves
+    )
         internal
         returns (bytes32 newRoot)
     {
@@ -58,7 +66,10 @@ library LocalExitTreeLib {
     /// @param tree The SMT storage reference
     /// @param depositIndex The deposit index
     /// @return proof The generated proof
-    function getProof(SparseMerkleTree.Bytes32SMT storage tree, uint256 depositIndex)
+    function getProof(
+        SparseMerkleTree.Bytes32SMT storage tree,
+        uint256 depositIndex
+    )
         internal
         view
         returns (SparseMerkleTree.Proof memory proof)
@@ -71,7 +82,10 @@ library LocalExitTreeLib {
     /// @param tree The current active tree
     /// @param proof The proof to verify
     /// @return valid Whether the proof is valid
-    function verifyProof(SparseMerkleTree.Bytes32SMT storage tree, SparseMerkleTree.Proof memory proof)
+    function verifyProof(
+        SparseMerkleTree.Bytes32SMT storage tree,
+        SparseMerkleTree.Proof memory proof
+    )
         internal
         view
         returns (bool valid)
@@ -82,8 +96,13 @@ library LocalExitTreeLib {
     /// @notice Compute exit leaf hash using DepositParams
     /// @dev see {IBridgeUtils.DepositParams}
     /// @return exitLeaf The computed exit leaf
-    function computeExitLeaf(IBridgeUtils.DepositParams memory params) internal pure returns (bytes32 exitLeaf) {
-        return keccak256(abi.encode(params.amount, params.token, params.to, params.destinationChain));
+    function computeExitLeaf(IBridgeUtils.DepositParams memory params)
+        internal
+        pure
+        returns (bytes32 exitLeaf)
+    {
+        return
+            keccak256(abi.encode(params.amount, params.token, params.to, params.destinationChain));
     }
 
     /// @notice Check if a leaf exists in the tree
@@ -91,7 +110,10 @@ library LocalExitTreeLib {
     /// @param depositIndex The deposit index to check
     /// @return exists Whether the leaf exists
     /// @return value The leaf value if it exists
-    function checkLeafExists(SparseMerkleTree.Bytes32SMT storage tree, uint256 depositIndex)
+    function checkLeafExists(
+        SparseMerkleTree.Bytes32SMT storage tree,
+        uint256 depositIndex
+    )
         internal
         view
         returns (bool exists, bytes32 value)
@@ -108,14 +130,22 @@ library LocalExitTreeLib {
     /// @notice Get the current root of the tree
     /// @param tree The SMT storage reference
     /// @return root The current root
-    function getRoot(SparseMerkleTree.Bytes32SMT storage tree) internal view returns (bytes32 root) {
+    function getRoot(SparseMerkleTree.Bytes32SMT storage tree)
+        internal
+        view
+        returns (bytes32 root)
+    {
         return tree.getRoot();
     }
 
     /// @notice Check if tree is initialized checks if the tree has any nodes
     /// @param tree The SMT storage reference
     /// @return initialized Whether the tree is initialized
-    function isInitialized(SparseMerkleTree.Bytes32SMT storage tree) internal view returns (bool initialized) {
+    function isInitialized(SparseMerkleTree.Bytes32SMT storage tree)
+        internal
+        view
+        returns (bool initialized)
+    {
         return tree.getNodesCount() > 0;
     }
 
@@ -123,7 +153,10 @@ library LocalExitTreeLib {
     /// @param tree The SMT storage reference
     /// @param depositIndex The deposit index to remove
     /// @return newRoot The new root after removal
-    function removeDeposit(SparseMerkleTree.Bytes32SMT storage tree, uint256 depositIndex)
+    function removeDeposit(
+        SparseMerkleTree.Bytes32SMT storage tree,
+        uint256 depositIndex
+    )
         internal
         returns (bytes32 newRoot)
     {
@@ -137,7 +170,11 @@ library LocalExitTreeLib {
     /// @param depositIndex The deposit index to update
     /// @param newExitLeaf The new exit leaf value
     /// @return newRoot The new root after update
-    function updateDeposit(SparseMerkleTree.Bytes32SMT storage tree, uint256 depositIndex, bytes32 newExitLeaf)
+    function updateDeposit(
+        SparseMerkleTree.Bytes32SMT storage tree,
+        uint256 depositIndex,
+        bytes32 newExitLeaf
+    )
         internal
         returns (bytes32 newRoot)
     {

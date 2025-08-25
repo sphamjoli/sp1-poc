@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import {IValidatorTypes} from "../validators/IValidatorManager.sol";
+
 /// @title Stake Manager Types
 /// @author brianspha
 /// @notice Type definitions for the stake manager system
-interface StakeManagerTypes {
+interface IStakeManagerTypes {
     /// @notice Parameters for initiating validator unstaking process
     /// @param stakeAmount Amount of tokens to unstake (partial or full)
     /// @param stakeVersion Configuration version hash that validator is staked under
@@ -31,8 +33,10 @@ interface StakeManagerTypes {
     /// @param stakeVersion Configuration version when validator staked
     /// @param stakeTimestamp When the validator first staked (for reward calculations)
     /// @param stakeExitTimestamp When unstaking was initiated (0 if not unstaking)
+    /// @param tokenId NFT id issue to the user when they stake
     /// @param unstakeAmount The amount the validator is unstaking reset after unstaking cycle completes
     /// @param pubkey Validator's BLS public key
+    /// @param The last valid epoc the validator got rewards in
     struct ValidatorBalance {
         uint256 balance;
         uint256 stakeAmount;
@@ -40,16 +44,20 @@ interface StakeManagerTypes {
         uint256 stakeTimestamp;
         uint256 stakeExitTimestamp;
         uint256 unstakeAmount;
+        uint256 tokenId;
+        uint256 lastRewardEpoch;
         uint256[4] pubkey;
     }
 
     /// @notice Parameters for distributing rewards to validators
-    /// @param totalReward Total reward amount to distribute across all recipients
-    /// @param recipients Array of validator addresses eligible for rewards
+    /// @param recipients Array of validator information eligible for rewards
+    /// @param epoch Rpresents the current epoch
+    /// @param epochDuration The time it takes for each epoch to complete
     /// @dev Individual reward amounts calculated based on stake and time
     struct RewardsParams {
-        uint256 totalReward;
-        address[] recipients;
+        IValidatorTypes.ValidatorInfo[] recipients;
+        uint256 epoch;
+        uint256 epochDuration;
     }
 
     /// @notice Configuration parameters for the staking system
@@ -77,11 +85,9 @@ interface StakeManagerTypes {
     /// @notice BLS signature proof for public key ownership
     /// @param signature BLS signature proving ownership of the public key
     /// @param pubkey BLS public key being claimed
-    /// @param message Message that was signed to prove ownership
     struct BlsOwnerShip {
         uint256[2] signature;
         uint256[4] pubkey;
-        uint256[2] message;
     }
 
     /// @notice Internal storage structure for the stake manager
@@ -97,7 +103,7 @@ interface StakeManagerTypes {
     /// @notice Parameters for slashing a misbehaving validator
     /// @param validator Address of the validator to slash
     /// @param slashAmount Amount of stake to remove (determined by validator manager)
-    /// @param __gap Storage gap for future upgrades
+    /// @param __gap Storage gap for future upgrades current impl has missing functionality
     struct SlashParams {
         address validator;
         uint256 slashAmount;
@@ -105,7 +111,9 @@ interface StakeManagerTypes {
     }
 
     // ========== ERRORS ==========
-
+    /// @notice Thrown when a validators doesnt meet the min performance threshold
+    /// for rewards
+    error LowPerformance();
     /// @notice Thrown when caller lacks required permissions
     error NotAllowed();
 
@@ -174,7 +182,11 @@ interface StakeManagerTypes {
 
     /// @notice Thrown when an incorrect staking version is supplied/used
     error InvalidStakingConfig();
-
+    error InvalidBLSSignature();
+    error InsufficientTreasury();
+    error NoEligibleValidators();
+    error NoValidators();
+    error NoStakedAmount();
     // ========== EVENTS ==========
 
     /// @notice Emitted when a validator stakes tokens
@@ -183,7 +195,10 @@ interface StakeManagerTypes {
     /// @param stakeAmount Amount of tokens staked
     /// @param stakeTimestamp When the staking occurred
     event ValidatorStaked(
-        address indexed walletAddress, bytes32 indexed stakeVersion, uint256 indexed stakeAmount, uint256 stakeTimestamp
+        address indexed walletAddress,
+        bytes32 indexed stakeVersion,
+        uint256 indexed stakeAmount,
+        uint256 stakeTimestamp
     );
 
     /// @notice Emitted when a validator completes unstaking
@@ -192,7 +207,10 @@ interface StakeManagerTypes {
     /// @param rewards Final reward amount received
     /// @param isPartial if the validator withdrew all their funds
     event ValidatorExit(
-        address indexed walletAddress, bytes32 indexed stakeVersion, uint256 indexed rewards, bool isPartial
+        address indexed walletAddress,
+        bytes32 indexed stakeVersion,
+        uint256 indexed rewards,
+        bool isPartial
     );
 
     /// @notice Emitted when a validator begins unstaking cooldown
@@ -211,23 +229,34 @@ interface StakeManagerTypes {
     /// @param validator Address of the validator
     /// @param reward Amount of rewards claimed
     /// @param when Timestamp of the claim
-    event ValidatorRewardsClaimed(address indexed validator, uint256 indexed reward, uint256 indexed when);
+    event ValidatorRewardsClaimed(
+        address indexed validator, uint256 indexed reward, uint256 indexed when
+    );
 
     /// @notice Emitted when rewards are allocated to a validator
     /// @param validator Address of the validator
     /// @param reward Amount of rewards allocated
-    event ValidatorRewarded(address indexed validator, uint256 indexed reward);
+    event ValidatorRewarded(
+        address indexed validator,
+        uint256 indexed performanceScore,
+        uint256 indexed reward,
+        uint256 correctAttestations
+    );
 
     /// @notice Emitted when rewards are distributed to validators
     /// @param total Total amount of rewards distributed
     /// @param totalValidator Number of validators that received rewards
     /// @param when Timestamp of the distribution
-    event RewardsDistributed(uint256 indexed total, uint256 indexed totalValidator, uint256 indexed when);
+    event RewardsDistributed(
+        uint256 indexed total, uint256 indexed totalValidator, uint256 indexed when
+    );
 
     /// @notice Emitted when stake manager configuration is updated
     /// @param oldConfig Previous configuration
     /// @param newConfig New configuration
-    event StakeManagerConfigUpdated(StakeManagerConfig indexed oldConfig, StakeManagerConfig indexed newConfig);
+    event StakeManagerConfigUpdated(
+        StakeManagerConfig indexed oldConfig, StakeManagerConfig indexed newConfig
+    );
 
     /// @notice Emitted when a validator is slashed for misbehavior
     /// @param validator Address of the slashed validator
