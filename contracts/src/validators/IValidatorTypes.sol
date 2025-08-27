@@ -69,7 +69,6 @@ interface IValidatorTypes {
         bytes32 bridgeRoot;
     }
 
-
     /// @notice Complete validator information
     /// @param blsPublicKey BLS public key for signature aggregation
     /// @param status Current validator status
@@ -186,9 +185,7 @@ interface IValidatorTypes {
     /// @param chainId Source chain identifier
     /// @param bridgeRoot Bridge root that was verified
     /// @param blockNumber Block number verified
-    event RootVerified(
-        uint256 indexed chainId, bytes32 indexed bridgeRoot, uint256 blockNumber
-    );
+    event RootVerified(uint256 indexed chainId, bytes32 indexed bridgeRoot, uint256 blockNumber);
 
     /// @notice Emitted when a new validator is added to the active set
     /// @param wallet Validator's wallet address used for rewards

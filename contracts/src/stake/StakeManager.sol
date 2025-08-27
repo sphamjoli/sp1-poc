@@ -103,9 +103,13 @@ contract StakeManager is
         NAME = "StakeManager";
         VERSION = "1";
         POP_STAKE_DOMAIN = "StakeManager:BN254:PoP:v1:";
-        EARLY_BONUS_EPOCHS = 12960; // ~90 days at 10 min epochs
-        MIN_PERFORMANCE_THRESHOLD = 80; // 80% performance minimum
-        EARLY_BONUS_AMOUNT = 1e18; // 1 token bonus
+        // ~90 days at 10 min epochs assuming we dont change this we could
+        // instead add a function to update this but for now its ayt
+        EARLY_BONUS_EPOCHS = 12960;
+        // 80% performance minimum
+        MIN_PERFORMANCE_THRESHOLD = 80;
+        // 1 token bonus could be more but this is a POC
+        EARLY_BONUS_AMOUNT = 1e18;
 
         __UUPSUpgradeable_init();
     }
