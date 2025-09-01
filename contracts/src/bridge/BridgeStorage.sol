@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {IBridgeUtils} from "./IBridgeTypes.sol";
+import {IBridgeUtils} from "./BridgeTypes.sol";
 import "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
 import {LocalExitTreeLib, SparseMerkleTree} from "../libs/LocalExitTreeLib.sol";
 

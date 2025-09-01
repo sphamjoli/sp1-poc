@@ -2,7 +2,7 @@
 pragma solidity ^0.8.30;
 
 import "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
-import {IBridgeUtils} from "../bridge/IBridgeTypes.sol";
+import {IBridgeUtils} from "../bridge/BridgeTypes.sol";
 
 /// @title LocalExitTreeLib
 /// @author brianspha

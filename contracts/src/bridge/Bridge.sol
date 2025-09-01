@@ -10,11 +10,12 @@ import {PausableUpgradeable} from
 import {BridgeStorage} from "./BridgeStorage.sol";
 import {IBridge} from "./IBridge.sol";
 import {LocalExitTreeLib, SparseMerkleTree} from "../libs/LocalExitTreeLib.sol";
-
+import {IValidatorManager, IValidatorTypes} from "../validator/ValidatorManager.sol";
 /// @title Bridge
 /// @author brianspha
 /// @notice Cross-chain bridge implementation with symmetric tree architecture
 /// @dev Handles both deposits (source chain) and claims (destination chain)
+
 contract Bridge is
     IBridge,
     BridgeStorage,
@@ -36,7 +37,7 @@ contract Bridge is
 
     /// @inheritdoc IBridge
     function initialize(address owner) external initializer {
-        require(owner != address(0), ZeroAddress());
+        require(owner != address(0), IValidatorTypes.ZeroAddress());
 
         __Pausable_init();
         __Ownable_init(owner);
@@ -211,7 +212,7 @@ contract Bridge is
 
     /// @inheritdoc IBridge
     function rescueEth(uint256 amount, address to) external onlyOwner {
-        require(to != address(0), ZeroAddress());
+        require(to != address(0), IValidatorTypes.ZeroAddress());
         require(address(this).balance >= amount, InsufficientBalance(address(0), amount));
         (bool success,) = to.call{value: amount}("");
         require(success, FailedToRescueEther());
@@ -219,8 +220,8 @@ contract Bridge is
 
     /// @inheritdoc IBridge
     function rescueTokens(address token, uint256 amount, address to) external onlyOwner {
-        require(token != address(0), ZeroAddress());
-        require(to != address(0), ZeroAddress());
+        require(token != address(0), IValidatorTypes.ZeroAddress());
+        require(to != address(0), IValidatorTypes.ZeroAddress());
 
         IERC20 tokenContract = IERC20(token);
         require(

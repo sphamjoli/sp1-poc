@@ -1,5 +1,11 @@
 [workspace]
-members = ["crates/bridge-lib", "crates/bridge-program", "crates/bridge-script", "crates/bridge-validator"]
+members = [
+  "crates/bridge-lib",
+  "crates/bridge-program",
+  "crates/bridge-script",
+  "crates/bridge-validator-evm",
+  "crates/bls-test-utls",
+]
 resolver = "2"
 
 [workspace.package]
@@ -65,14 +71,22 @@ alloy-sol-types = { version = "1.2.1", default-features = false }
 
 # misc
 clap = { version = "4.5.41", features = ["derive", "env"] }
-hex = { version = "0.4.3", default-features = false }
+hex = { version = "0.4.3", features = ["alloc"], default-features = false }
 gql_client = { version = "1.0.8", default-features = false }
-sha3 = { version = "0.10.8" }
-
+sha3 = { version = "0.11.0-rc.0", default-features = false }
+sylow = { version = "0.1.1", default-features = false }
+ark-bn254 = { version = "0.5.0", default-features = false }
+ark-ec = { version = "0.5.0", default-features = false }
+ark-ff = { version = "0.5.0", default-features = false }
+ark-serialize = { version = "0.5.0", default-features = false }
+ark-std = { version = "0.5.0", default-features = false }
+sha2 = { version = "0.11.0-pre.4", default-features = false }
+crypto-bigint = { version = "0.6.1", default-features = false }
 # crates
 bridge-lib = { path = "crates/bridge-lib", default-features = false }
 bridge-program = { path = "crates/bridge-program" }
 bridge-script = { path = "crates/bridge-script" }
+
 
 [workspace.lints]
 rust.missing_debug_implementations = "warn"

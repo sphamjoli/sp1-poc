@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {IBridgeUtils} from "./IBridgeTypes.sol";
+import {IBridgeUtils} from "./BridgeTypes.sol";
 
 /// @title IBridge
 /// @notice Interface for a POC SP1-powered cross-chain bridge contract

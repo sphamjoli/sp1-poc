@@ -6,7 +6,7 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {SP1VerifierGateway} from "@sp1-contracts/SP1VerifierGateway.sol";
 import {BridgeToken} from "../../src/test/BridgeToken.sol";
 import {Bridge} from "../../src/bridge/Bridge.sol";
-import {IBridgeUtils} from "../../src/bridge/IBridgeTypes.sol";
+import {IBridgeUtils} from "../../src/bridge/BridgeTypes.sol";
 import {Upgrades, Options} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {JsonDeploymentHandler} from "../util/JsonDeploymentHandler.sol";
 import {StringUtil} from "../util/StringUtil.sol";

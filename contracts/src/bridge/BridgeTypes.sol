@@ -144,9 +144,6 @@ interface IBridgeUtils {
     /// @notice Required bytes32 parameter is zero
     error ZeroBytes32();
 
-    /// @notice Required address parameter is the zero address
-    error ZeroAddress();
-
     /// @notice Deposit has already been claimed
     /// @param sourceChain Source chain ID
     /// @param depositIndex Index of the deposit that was already claimed

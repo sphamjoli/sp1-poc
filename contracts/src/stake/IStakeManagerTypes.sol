@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {IValidatorTypes} from "../validators/IValidatorManager.sol";
+import {IValidatorTypes} from "../validator/IValidatorTypes.sol";
 
 /// @title Stake Manager Types
 /// @author brianspha
@@ -18,11 +18,9 @@ interface IStakeManagerTypes {
     }
 
     /// @notice Parameters for staking tokens as a validator
-    /// @param pubkey Uncompressed BLS public key for signature aggregation (4 x uint256)
     /// @param stakeAmount Amount of tokens to stake (must meet minimum requirements)
     /// @param stakeVersion Version hash of the staking configuration
     struct StakeParams {
-        uint256[4] pubkey;
         uint256 stakeAmount;
         bytes32 stakeVersion;
     }
@@ -69,7 +67,6 @@ interface IStakeManagerTypes {
     /// @param maxMissedProofs Maximum missed proofs before potential slashing
     /// @param slashingRate Percentage of stake to slash for severe violations
     /// @param stakingToken Address of the ERC20 token used for staking
-    /// @param __gap Storage gap for future upgrades
     struct StakeManagerConfig {
         uint256 minStakeAmount;
         uint256 minWithdrawAmount;
@@ -79,7 +76,6 @@ interface IStakeManagerTypes {
         uint32 maxMissedProofs;
         uint256 slashingRate;
         address stakingToken;
-        uint256[8] __gap;
     }
 
     /// @notice BLS signature proof for public key ownership
@@ -93,7 +89,6 @@ interface IStakeManagerTypes {
     /// @notice Internal storage structure for the stake manager
     /// @param balances Mapping of validator addresses to their balance information
     /// @param stakingManagerVersions used to store all the staking versions
-    /// @param __gap Storage gap for future upgrades
     struct SMStorage {
         mapping(address validator => ValidatorBalance balance) balances;
         mapping(bytes32 version => StakeManagerConfig config) stakingManagerVersions;
@@ -103,11 +98,9 @@ interface IStakeManagerTypes {
     /// @notice Parameters for slashing a misbehaving validator
     /// @param validator Address of the validator to slash
     /// @param slashAmount Amount of stake to remove (determined by validator manager)
-    /// @param __gap Storage gap for future upgrades current impl has missing functionality
     struct SlashParams {
         address validator;
         uint256 slashAmount;
-        uint256[10] __gap;
     }
 
     // ========== ERRORS ==========
@@ -137,9 +130,6 @@ interface IStakeManagerTypes {
 
     /// @notice Thrown when insufficient token approval for staking
     error NotApproved();
-
-    /// @notice Thrown when insufficient balance for requested operation
-    error InsufficientBalance();
 
     /// @notice Thrown when array parameters have mismatched lengths
     error ArrayLengthMismatch();
@@ -179,6 +169,12 @@ interface IStakeManagerTypes {
 
     /// @notice Thrown when remaining stake after slashing is below minimum
     error BelowMinimumStake();
+
+    /// @notice thrown when the provided BLS pub key is invalid
+    error InvalidPublicKey();
+
+    /// @notice thrown when the provided BLS signature is invalid
+    error InvalidSignature();
 
     /// @notice Thrown when an incorrect staking version is supplied/used
     error InvalidStakingConfig();

@@ -15,7 +15,7 @@ import {BLS} from "solbls/BLS.sol";
 import {StakeManagerStorage} from "./StakeManagerStorage.sol";
 import {ArrayContainsLib} from "../libs/ArrayContainsLib.sol";
 import {IStakeManager} from "./IStakeManager.sol";
-import {IValidatorManager, IValidatorTypes} from "../validators/IValidatorManager.sol";
+import {IValidatorManager, IValidatorTypes} from "../validator/IValidatorManager.sol";
 
 /// @title Stake Manager
 /// @author Brianspha
@@ -124,6 +124,8 @@ contract StakeManager is
         whenNotPaused
     {
         uint256[2] memory msgToVerify = proofOfPossessionMessage(proof.pubkey);
+        require(BLS.isValidPublicKey(proof.pubkey), InvalidPublicKey());
+        require(BLS.isValidSignature(proof.signature), InvalidSignature());
         (bool pairingSuccess, bool callSuccess) =
             BLS.verifySingle(proof.signature, proof.pubkey, msgToVerify);
 
@@ -151,7 +153,7 @@ contract StakeManager is
         validator.stakeAmount += params.stakeAmount;
         validator.stakeVersion = params.stakeVersion;
         validator.stakeTimestamp = block.timestamp;
-        validator.pubkey = params.pubkey;
+        validator.pubkey = proof.pubkey;
 
         emit ValidatorStaked(
             msg.sender, validator.stakeVersion, validator.stakeAmount, block.timestamp
@@ -177,9 +179,8 @@ contract StakeManager is
         override
         returns (uint256[2] memory)
     {
-        bytes memory messageBytes = abi.encodePacked(
-            POP_STAKE_DOMAIN, blsPubkey[0], blsPubkey[1], blsPubkey[2], blsPubkey[3], msg.sender
-        );
+        bytes memory messageBytes =
+            abi.encodePacked(blsPubkey[0], blsPubkey[1], blsPubkey[2], blsPubkey[3], msg.sender);
         return BLS.hashToPoint(POP_STAKE_DOMAIN, messageBytes);
     }
 

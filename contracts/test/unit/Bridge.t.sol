@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {BridgeBaseTest} from "../base/BridgeBase.t.sol";
 import "forge-std/Test.sol";
+import {BridgeBaseTest} from "../base/BridgeBase.t.sol";
 
 contract BridgeTest is BridgeBaseTest {
     function test_depositChainA() public {

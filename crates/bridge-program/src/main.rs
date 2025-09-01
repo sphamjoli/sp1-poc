@@ -3,7 +3,6 @@
 #![no_main]
 sp1_zkvm::entrypoint!(main);
 
-
 pub fn main() {
     //let input = sp1_zkvm::io::read();
 

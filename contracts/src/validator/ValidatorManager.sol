@@ -237,7 +237,6 @@ contract ValidatorManager is
         returns (uint256[2] memory)
     {
         bytes memory messageBytes = abi.encodePacked(
-            POP_ATTEST_DOMAIN,
             blsPubkey[0],
             blsPubkey[1],
             blsPubkey[2],

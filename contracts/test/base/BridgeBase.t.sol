@@ -6,7 +6,7 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {SP1VerifierGateway} from "@sp1-contracts/SP1VerifierGateway.sol";
 import {BridgeToken} from "../../src/test/BridgeToken.sol";
 import {Bridge} from "../../src/bridge/Bridge.sol";
-import {IBridgeUtils} from "../../src/bridge/IBridgeTypes.sol";
+import {IBridgeUtils} from "../../src/bridge/BridgeTypes.sol";
 import {Upgrades, Options} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {LocalExitTreeLib, SparseMerkleTree} from "../../src/libs/LocalExitTreeLib.sol";
 
@@ -17,6 +17,9 @@ abstract contract BridgeBaseTest is Test, IBridgeUtils {
     /// @notice Program verification key for SP1 verifier
     bytes32 public constant PROGRAM_VKEY =
         hex"005a0f7559959ae95bb66f020e3d30b7b091755fb43e911dd8b967c901489a83";
+
+    /// @notice Verifier address on all networks
+    address public constant SP1_VERIFIER = address(0x3B6041173B80E77f038f3F2C0f9744f04837185e);
 
     /// @notice Test user addresses
     address public alice;
@@ -57,7 +60,7 @@ abstract contract BridgeBaseTest is Test, IBridgeUtils {
     /// @dev Tree Chain B
     SparseMerkleTree.Bytes32SMT internal treeB;
 
-    function setUp() public virtual {
+    function setUp() public virtual noGasMetering {
         owner = _createUser("owner");
         spha = _createUser("spha");
         james = _createUser("james");
@@ -66,8 +69,8 @@ abstract contract BridgeBaseTest is Test, IBridgeUtils {
         jenifer = _createUser("jenifer");
         options.unsafeSkipAllChecks = true;
 
-        FORKA_ID = vm.createSelectFork(vm.envString("ETH_RPC_URL"), 23164198);
-        FORKB_ID = vm.createSelectFork(vm.envString("BASE_RPC_URL"), 34342799);
+        FORKA_ID = vm.createSelectFork(vm.envString("ETH_RPC_URL"));
+        FORKB_ID = vm.createSelectFork(vm.envString("BASE_RPC_URL"));
 
         vm.selectFork(FORKA_ID);
         _setupChainA();

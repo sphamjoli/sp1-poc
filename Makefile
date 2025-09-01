@@ -11,7 +11,7 @@ ELF_PATH ?= $(TARGET_DIR)/elf-compilation/riscv32im-succinct-zkvm-elf/release/$(
 GREEN := \033[0;32m
 YELLOW := \033[0;33m
 RED := \033[0;31m
-NC := \033[0m 
+NC := \033[0m
 
 .PHONY: help init install-rust install-taplo install-sp1 setup-submodules \
         install-dependencies fmt lint clippy test clean ci update \
@@ -65,7 +65,7 @@ help:
 	@echo "  make generate-groth16-proof  # Generate proof"
 
 init: validate-env install-rust install-taplo install-sp1 setup-submodules install-dependencies
-	@echo "$(GREEN)✓ Project initialization complete$(NC)"
+	@echo "$(GREEN) Project initialization complete$(NC)"
 
 validate-env:
 	@echo "$(YELLOW)Validating environment...$(NC)"
@@ -82,7 +82,7 @@ install-rust:
 	@rustup install $(RUST_TOOLCHAIN)
 	@rustup component add rustfmt --toolchain $(RUST_TOOLCHAIN)
 	@rustup component add clippy --toolchain $(RUST_TOOLCHAIN)
-	@echo "$(GREEN)✓ Rust toolchain installed$(NC)"
+	@echo "$(GREEN) Rust toolchain installed$(NC)"
 
 install-sp1:
 	@echo "$(YELLOW)Installing SP1 toolchain...$(NC)"
@@ -92,14 +92,14 @@ install-sp1:
 		. ~/.bashrc || . ~/.zshrc || true; \
 		sp1up; \
 	fi
-	@echo "$(GREEN)✓ SP1 toolchain installed$(NC)"
+	@echo "$(GREEN) SP1 toolchain installed$(NC)"
 
 install-taplo:
 	@echo "$(YELLOW)Installing TAPLO...$(NC)"
 	@if ! command -v taplo >/dev/null 2>&1; then \
 		cargo install taplo-cli --locked; \
 	fi
-	@echo "$(GREEN)✓ TAPLO installed$(NC)"
+	@echo "$(GREEN) TAPLO installed$(NC)"
 
 setup-submodules:
 	@echo "$(YELLOW)Setting up submodules...$(NC)"
@@ -108,60 +108,60 @@ setup-submodules:
 	else \
 		git submodule update --init --recursive; \
 	fi
-	@echo "$(GREEN)✓ Submodules initialized$(NC)"
+	@echo "$(GREEN) Submodules initialized$(NC)"
 
 install-dependencies:
 	@echo "$(YELLOW)Fetching dependencies...$(NC)"
 	@cargo fetch
-	@echo "$(GREEN)✓ Dependencies fetched$(NC)"
+	@echo "$(GREEN) Dependencies fetched$(NC)"
 
 check-tools:
 	@echo "$(YELLOW)Checking required tools...$(NC)"
 	@command -v rustup >/dev/null 2>&1 || { echo "$(RED)Error: rustup not found. Run 'make install-rust'$(NC)"; exit 1; }
 	@command -v taplo >/dev/null 2>&1 || { echo "$(RED)Error: taplo not found. Run 'make install-taplo'$(NC)"; exit 1; }
-	@echo "$(GREEN)✓ All tools available$(NC)"
+	@echo "$(GREEN) All tools available$(NC)"
 
 check-sp1:
 	@echo "$(YELLOW)Checking SP1 installation...$(NC)"
 	@command -v cargo-prove >/dev/null 2>&1 || { echo "$(RED)Error: cargo-prove not found. Run 'make install-sp1'$(NC)"; exit 1; }
-	@echo "$(GREEN)✓ SP1 tools available$(NC)"
+	@echo "$(GREEN) SP1 tools available$(NC)"
 
 fmt: check-tools
 	@echo "$(YELLOW)Formatting code...$(NC)"
 	@find crates -name "*.rs" -exec rustup run $(RUST_TOOLCHAIN) rustfmt {} --edition $(RUST_EDITION) \; 2>/dev/null || true
 	@taplo fmt
-	@echo "$(GREEN)✓ Code formatted$(NC)"
+	@echo "$(GREEN) Code formatted$(NC)"
 
 lint: check-tools
 	@echo "$(YELLOW)Checking code formatting...$(NC)"
 	@find crates -name "*.rs" -exec rustup run $(RUST_TOOLCHAIN) rustfmt --check {} --edition $(RUST_EDITION) \; 2>/dev/null || { echo "$(RED)Code formatting check failed$(NC)"; exit 1; }
 	@taplo fmt --check || { echo "$(RED)TOML formatting check failed$(NC)"; exit 1; }
-	@echo "$(GREEN)✓ Code formatting OK$(NC)"
+	@echo "$(GREEN) Code formatting OK$(NC)"
 
 clippy: check-tools
 	@echo "$(YELLOW)Running Clippy...$(NC)"
 	@cargo clippy --all-targets --all-features --locked --workspace --quiet -- -D warnings
-	@echo "$(GREEN)✓ Clippy checks passed$(NC)"
+	@echo "$(GREEN) Clippy checks passed$(NC)"
 
 test:
 	@echo "$(YELLOW)Running tests...$(NC)"
 	@cargo test --workspace
-	@echo "$(GREEN)✓ Tests passed$(NC)"
+	@echo "$(GREEN) Tests passed$(NC)"
 
 clean:
 	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
 	@cargo clean
 	@rm -rf $(TARGET_DIR)/
-	@echo "$(GREEN)✓ Clean complete$(NC)"
+	@echo "$(GREEN) Clean complete$(NC)"
 
 ci: lint clippy test
-	@echo "$(GREEN)✓ CI workflow complete$(NC)"
+	@echo "$(GREEN) CI workflow complete$(NC)"
 
 update:
 	@echo "$(YELLOW)Updating dependencies...$(NC)"
 	@cargo update
 	@git submodule update --remote
-	@echo "$(GREEN)✓ Update complete$(NC)"
+	@echo "$(GREEN) Update complete$(NC)"
 
 build-program: check-sp1
 	@echo "$(YELLOW)Building SP1 program ($(PROGRAM_NAME))...$(NC)"
@@ -170,13 +170,13 @@ build-program: check-sp1
 		exit 1; \
 	fi
 	@cd crates/$(PROGRAM_NAME) && cargo prove build
-	@echo "$(GREEN)✓ SP1 program built to ELF$(NC)"
+	@echo "$(GREEN) SP1 program built to ELF$(NC)"
 
 execute-program: build-program
 	@echo "$(YELLOW)Executing program without proving...$(NC)"
 	@cd crates/bridge-script && \
 		RUSTFLAGS="-C target-cpu=native" SP1_PROVER=cpu RUST_LOG=info cargo run --bin evm --release -- --chain-id $(CHAIN_ID) --system groth16
-	@echo "$(GREEN)✓ Program executed successfully$(NC)"
+	@echo "$(GREEN) Program executed successfully$(NC)"
 
 create-elf: build-program
 
@@ -189,7 +189,7 @@ create-program-key: build-program
 		exit 1; \
 	fi
 	@cargo prove vkey --elf $(ELF_PATH)
-	@echo "$(GREEN)✓ Program verification key created$(NC)"
+	@echo "$(GREEN) Program verification key created$(NC)"
 
 generate-groth16-proof: build-program
 	@echo "$(YELLOW)Generating Groth16 proof (Chain ID: $(CHAIN_ID), Prover: $(PROVER_TYPE))...$(NC)"
@@ -198,7 +198,7 @@ generate-groth16-proof: build-program
 		SP1_PROVER=$(PROVER_TYPE) \
 		RUST_LOG=info \
 		cargo run --bin evm --release -- --chain-id $(CHAIN_ID) --system groth16
-	@echo "$(GREEN)✓ Groth16 proof generated$(NC)"
+	@echo "$(GREEN) Groth16 proof generated$(NC)"
 
 generate-proof-gpu: PROVER_TYPE=gpu
 generate-proof-gpu: generate-groth16-proof
