@@ -28,26 +28,6 @@ At a high level, for each address in `wallets`:
 6. Check `pairing(sig, G2_gen) == pairing(H(m), pk)` locally.
 7. Emit a JSON file `bls_test_data.json` with the vectors.
 
-### Data flow
-
-```mermaid
-flowchart TD
-  A[Wallet address] -->|abi.encodePacked with pk| B[Message m]
-  subgraph G2 serialization
-    PkG2[pk in G2] -->|to_be_bytes| L[x.c0, x.c1, y.c0, y.c1]
-    L -->|re/im reorder| S[[x_re, x_im, y_re, y_im]]
-  end
-  S --> B
-  B --> C[expand_message_xmd(Keccak256, 96)]
-  C --> D[SVDW map -> H(m) in G1]
-  E[Secret key sk] --> F[Sign H(m)]
-  D --> F
-  F --> G[Signature in G1]
-  D --> H[Pairing check]
-  PkG2 --> H
-  H --> I[Write JSON: sk, pk, H(m), sig]
-```
-
 ## How to run
 
 Use this exact invocation to avoid workspace lock contention (see next section):
