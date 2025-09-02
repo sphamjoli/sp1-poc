@@ -221,6 +221,13 @@ interface IStakeManagerTypes {
         uint256 stakeExitTimestamp
     );
 
+    /// @notice Emitted when the Validator manager address is updated
+    /// @param currentValidatorManager Currently set manageraddress
+    /// @param newValidatorManager New manager address
+    event UpdatedValidatorManager(
+        address indexed currentValidatorManager, address indexed newValidatorManager
+    );
+
     /// @notice Emitted when a validator claims their rewards
     /// @param validator Address of the validator
     /// @param reward Amount of rewards claimed

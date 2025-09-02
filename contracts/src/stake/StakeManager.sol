@@ -2,20 +2,23 @@
 pragma solidity ^0.8.30;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {
-    ERC721Enumerable,
-    ERC721
-} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+    ERC721EnumerableUpgradeable,
+    ERC721Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {PausableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {BLS} from "solbls/BLS.sol";
 import {StakeManagerStorage} from "./StakeManagerStorage.sol";
 import {ArrayContainsLib} from "../libs/ArrayContainsLib.sol";
 import {IStakeManager} from "./IStakeManager.sol";
 import {IValidatorManager, IValidatorTypes} from "../validator/IValidatorManager.sol";
+import {ReentrancyGuardUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 /// @title Stake Manager
 /// @author Brianspha
@@ -23,11 +26,12 @@ import {IValidatorManager, IValidatorTypes} from "../validator/IValidatorManager
 contract StakeManager is
     IStakeManager,
     Initializable,
-    Ownable,
+    OwnableUpgradeable,
     UUPSUpgradeable,
-    ERC721Enumerable,
+    ERC721EnumerableUpgradeable,
     StakeManagerStorage,
-    Pausable
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
 {
     using BLS for *;
     using ArrayContainsLib for address[];
@@ -75,7 +79,7 @@ contract StakeManager is
     uint256 public EARLY_BONUS_AMOUNT;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() ERC721("SP1 Bridge Poc", "SBP") Ownable(msg.sender) {
+    constructor() {
         CHAIN_ID = block.chainid;
         // 5% annually (APY)
         REWARD_RATE = 500;
@@ -93,10 +97,6 @@ contract StakeManager is
         override
         initializer
     {
-        emit StakeManagerConfigUpdated(ACTIVE_STAKING_CONFIG, config);
-        ACTIVE_STAKING_CONFIG = config;
-        VALIDATOR_MANAGER = manager;
-
         SMStorage storage $ = __loadStorage();
         $.stakingManagerVersions[getStakeVersion(config)] = config;
 
@@ -111,7 +111,18 @@ contract StakeManager is
         // 1 token bonus could be more but this is a POC
         EARLY_BONUS_AMOUNT = 1e18;
 
+        __Ownable_init(msg.sender);
+        __ERC721_init("SP1 Bridge Poc", "SBP");
+        __Pausable_init();
         __UUPSUpgradeable_init();
+        upgradeStakeConfig(config);
+        updateValidatorManager(manager);
+    }
+
+    /// @inheritdoc IStakeManager
+    function updateValidatorManager(address manager) public onlyOwner {
+        emit UpdatedValidatorManager(VALIDATOR_MANAGER, manager);
+        VALIDATOR_MANAGER = manager;
     }
 
     /// @inheritdoc IStakeManager
@@ -122,6 +133,7 @@ contract StakeManager is
         external
         override
         whenNotPaused
+        nonReentrant
     {
         uint256[2] memory msgToVerify = proofOfPossessionMessage(proof.pubkey);
         require(BLS.isValidPublicKey(proof.pubkey), InvalidPublicKey());
@@ -160,15 +172,23 @@ contract StakeManager is
         );
     }
 
-    /// @inheritdoc ERC721
+    /// @inheritdoc ERC721Upgradeable
     /// @dev Transfers are disabled for validator NFTs
-    function transferFrom(address, address, uint256) public pure override(IERC721, ERC721) {
+    function transferFrom(
+        address,
+        address,
+        uint256
+    )
+        public
+        pure
+        override(IERC721, ERC721Upgradeable)
+    {
         revert NotAllowed();
     }
 
-    /// @inheritdoc ERC721
+    /// @inheritdoc ERC721Upgradeable
     /// @dev Approvals are disabled for validator NFTs
-    function approve(address, uint256) public pure override(IERC721, ERC721) {
+    function approve(address, uint256) public pure override(IERC721, ERC721Upgradeable) {
         revert NotAllowed();
     }
 
@@ -259,7 +279,7 @@ contract StakeManager is
     }
 
     /// @inheritdoc IStakeManager
-    function upgradeStakeConfig(StakeManagerConfig calldata config) external override onlyOwner {
+    function upgradeStakeConfig(StakeManagerConfig memory config) public override onlyOwner {
         emit StakeManagerConfigUpdated(ACTIVE_STAKING_CONFIG, config);
         ACTIVE_STAKING_CONFIG = config;
     }

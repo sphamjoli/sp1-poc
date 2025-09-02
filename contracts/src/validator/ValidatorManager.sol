@@ -4,9 +4,10 @@ pragma solidity ^0.8.30;
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ISP1Verifier} from "@sp1-contracts/ISP1Verifier.sol";
 import {IValidatorManager, IValidatorTypes} from "./IValidatorManager.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {PausableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ValidatorManagerStorage} from "./ValidatorManagerStorage.sol";
 import {BLS} from "solbls/BLS.sol";
@@ -18,9 +19,9 @@ import {IStakeManager, IStakeManagerTypes} from "../stake/IStakeManager.sol";
 contract ValidatorManager is
     IValidatorManager,
     Initializable,
-    Ownable,
+    OwnableUpgradeable,
     UUPSUpgradeable,
-    Pausable,
+    PausableUpgradeable,
     ValidatorManagerStorage
 {
     using BLS for *;
@@ -28,7 +29,7 @@ contract ValidatorManager is
 
     /// @notice Restricts access to stake manager only
     modifier onlyStakeManager() {
-        require(msg.sender == STAKING_MANAGER, NotStakeManager());
+        require(msg.sender == STAKING_MANAGER, NotStakeManager(msg.sender));
         _;
     }
 
@@ -60,7 +61,7 @@ contract ValidatorManager is
     uint256 public EPOCH_DURATION;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() Ownable(msg.sender) {
+    constructor() {
         CHAIN_ID = block.chainid;
         _disableInitializers();
     }
@@ -75,22 +76,27 @@ contract ValidatorManager is
         override
         initializer
     {
-        require(stakingManager != address(0), ZeroAddress());
         require(verifier != address(0), ZeroAddress());
 
-        STAKING_MANAGER = stakingManager;
         SP1_VERIFIER = verifier;
         NAME = "ValidatorManager";
         VERSION = "1";
         POP_ATTEST_DOMAIN = "ValidatorManager:BN254:PoP:v1:";
 
-        emit ProgramKeyUpdated(PROGRAM_KEY, programKey);
-        PROGRAM_KEY = programKey;
-
         EPOCH = 1;
         EPOCH_DURATION = 10 minutes;
 
+        __Ownable_init(msg.sender);
+        __Pausable_init();
         __UUPSUpgradeable_init();
+        updateProgramKey(programKey);
+        updateStakingManager(stakingManager);
+    }
+
+    /// @inheritdoc IValidatorManager
+    function updateStakingManager(address stakingManager) public onlyOwner {
+        emit UpdatedStakingManager(STAKING_MANAGER, stakingManager);
+        STAKING_MANAGER = stakingManager;
     }
 
     /// @inheritdoc IValidatorManager
@@ -300,8 +306,9 @@ contract ValidatorManager is
     }
 
     /// @inheritdoc IValidatorManager
-    function updateProgramKey(bytes32 programKey) external override onlyOwner {
+    function updateProgramKey(bytes32 programKey) public override onlyOwner {
         emit ProgramKeyUpdated(PROGRAM_KEY, programKey);
+        require(programKey != bytes32(0), InvalidProgramKey(programKey));
         PROGRAM_KEY = programKey;
     }
 

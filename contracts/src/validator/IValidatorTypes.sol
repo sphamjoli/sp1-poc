@@ -11,6 +11,9 @@ import {IStakeManagerTypes} from "../stake/IStakeManagerTypes.sol";
 interface IValidatorTypes {
     // ========== ERRORS ==========
 
+    /// @notice Thrown when the new program key is the default bytes32 value
+    error InvalidProgramKey(bytes32 key);
+
     /// @notice Required address parameter is the zero address
     error ZeroAddress();
 
@@ -33,7 +36,7 @@ interface IValidatorTypes {
     error AlreadyAttested();
 
     /// @notice Thrown when msg.sender is not the StakeManager contract
-    error NotStakeManager();
+    error NotStakeManager(address caller);
 
     // ========== ENUMS ==========
 
@@ -201,6 +204,13 @@ interface IValidatorTypes {
     /// @param currentKey Previous program verification key
     /// @param newKey New program verification key
     event ProgramKeyUpdated(bytes32 indexed currentKey, bytes32 indexed newKey);
+
+    /// @notice Emitted when the Staking manager address is updated
+    /// @param currentStakingManager Currently set manageraddress
+    /// @param newStakingManager New manager address
+    event UpdatedStakingManager(
+        address indexed currentStakingManager, address indexed newStakingManager
+    );
 
     /// @notice emitted when bridge roots have been verified
     /// @param currentEpoch The current epoch number

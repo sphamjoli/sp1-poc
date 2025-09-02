@@ -109,6 +109,11 @@ interface IValidatorManager is IValidatorTypes {
         view
         returns (uint256[2] memory);
 
+    /// @notice Updates the staking manager address
+    /// @param stakingManager The new manager address
+    /// @dev Only owner can make this call
+    function updateStakingManager(address stakingManager) external;
+
     /// @notice Allows an admin to update the program key
     /// @param programKey The verification key for the Bridge i.e RISC-V program.
     function updateProgramKey(bytes32 programKey) external;

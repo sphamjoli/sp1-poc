@@ -31,8 +31,8 @@ contract StakeManagerTest is StakeManagerBaseTest {
     }
 
     function test_initialize_sets_correct_values() public {
-        vm.selectFork(CHAINA_ID);
-        vm.prank(owner);
+        vm.selectFork(FORKA_ID);
+        _prankOwnerOnChain(FORKA_ID);
 
         assertEq(stakeManagerA.NAME(), "StakeManager");
         assertEq(stakeManagerA.VERSION(), "1");
@@ -43,33 +43,6 @@ contract StakeManagerTest is StakeManagerBaseTest {
     }
 
     function test_stake_successful_with_valid_bls_proof() public {
-        BlsTestData memory data = validatorBlsData[alice];
-        // Need to fix the staking version issue
-        vm.startPrank(alice);
-        vm.selectFork(CHAINA_ID);
-        TOKEN_CHAINA.approve(address(stakeManagerA), 200 ether);
-
-        uint256[4] memory pubkey = [
-            vm.parseUint(data.publicKey[0]),
-            vm.parseUint(data.publicKey[1]),
-            vm.parseUint(data.publicKey[2]),
-            vm.parseUint(data.publicKey[3])
-        ];
-
-        uint256[2] memory signature =
-            [vm.parseUint(data.proofOfPossession[0]), vm.parseUint(data.proofOfPossession[1])];
-
-        StakeParams memory params = StakeParams({
-            stakeAmount: 200 ether,
-            stakeVersion: stakeManagerA.getStakeVersion(testConfig)
-        });
-
-        BlsOwnerShip memory proof = BlsOwnerShip({signature: signature, pubkey: pubkey});
-
-        vm.expectEmit(true, true, true, true);
-        emit ValidatorStaked(alice, testConfigVersionA, 200 ether, block.timestamp);
-
-        stakeManagerA.stake(params, proof);
-        vm.stopPrank();
+        _stakeAsUser(alice, 200 ether, FORKA_ID);
     }
 }

@@ -76,4 +76,9 @@ interface IStakeManager is IStakeManagerTypes {
         external
         view
         returns (uint256[2] memory);
+
+    /// @notice Updates the Validator manager address
+    /// @param manager The new Validator address
+    /// @dev Only owner can make this call
+    function updateValidatorManager(address manager) external;
 }
