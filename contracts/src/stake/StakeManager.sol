@@ -378,7 +378,6 @@ contract StakeManager is
         _unpause();
     }
 
-    event TokenId(uint256 indexed tokenId);
     /// @notice Mint NFT and register new validator
     /// @param validator Address of the validator
     /// @param pubkey BLS public key of the validator
@@ -388,7 +387,6 @@ contract StakeManager is
         SMStorage storage $ = __loadStorage();
         $.balances[validator].tokenId = tokenId;
         _mint(validator, tokenId);
-        emit TokenId(tokenId);
         IValidatorTypes.ValidatorInfo memory info = IValidatorTypes.ValidatorInfo({
             blsPublicKey: pubkey,
             wallet: validator,
