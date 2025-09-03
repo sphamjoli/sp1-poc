@@ -128,6 +128,9 @@ interface IStakeManagerTypes {
     /// @notice Thrown when stake amount is below minimum requirement
     error MinStakeAmountRequired();
 
+    /// @notice Thrown when stake amount is greater than current staked amount
+    error AmountExceedsStake();
+
     /// @notice Thrown when insufficient token approval for staking
     error NotApproved();
 
@@ -183,6 +186,7 @@ interface IStakeManagerTypes {
     error NoEligibleValidators();
     error NoValidators();
     error NoStakedAmount();
+    error DivisionFailed();
     // ========== EVENTS ==========
 
     /// @notice Emitted when a validator stakes tokens

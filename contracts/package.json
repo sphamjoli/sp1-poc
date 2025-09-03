@@ -15,6 +15,7 @@
     "lint:sol": "solhint 'src/**/*.sol'"
   },
   "devDependencies": {
+    "@prb/math": "^4.1.0",
     "@solarity/solidity-lib": "^3.2.0",
     "@types/node": "^24.1.0",
     "solhint": "^6.0.1",

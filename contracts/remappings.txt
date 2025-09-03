@@ -4,3 +4,5 @@
 @solarity/solidity-lib=node_modules/@solarity/solidity-lib
 solady=./lib/solady/src
 solbls=./lib/solbls/src
+@prb/math/=node_modules/@prb/math/
+

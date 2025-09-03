@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -63,6 +64,8 @@ contract StakeManager is
     /// @notice Annual reward rate in basis points (500 = 5%)
     uint256 public immutable REWARD_RATE;
 
+    uint256 public immutable PERFORMANCE_SCALE;
+
     /// @notice Scaling factor for precise calculations
     uint64 public immutable SCALING_FACTOR;
 
@@ -83,8 +86,8 @@ contract StakeManager is
         CHAIN_ID = block.chainid;
         // 5% annually (APY)
         REWARD_RATE = 500;
-        COUNTER++;
         SCALING_FACTOR = 1e18;
+        PERFORMANCE_SCALE = 10_000;
         _disableInitializers();
     }
 
@@ -100,6 +103,7 @@ contract StakeManager is
         SMStorage storage $ = __loadStorage();
         $.stakingManagerVersions[getStakeVersion(config)] = config;
 
+        COUNTER = 1;
         NAME = "StakeManager";
         VERSION = "1";
         POP_STAKE_DOMAIN = "StakeManager:BN254:PoP:v1:";
@@ -233,14 +237,29 @@ contract StakeManager is
 
         require(config.minStakeAmount > 0, InvalidStakingConfig());
         require(validator.stakeAmount > 0, ValidatorNotFound());
-        require(validator.stakeExitTimestamp == 0, NotAllowed());
-        require(validator.stakeAmount >= config.minStakeAmount, MinStakeAmountRequired());
 
-        validator.stakeExitTimestamp = block.timestamp;
+        require(validator.stakeExitTimestamp == 0, NotAllowed());
+
+        require(validator.stakeVersion == params.stakeVersion, InvalidStakeVersion());
+
+        require(params.stakeAmount > 0, MinStakeAmountRequired());
+        require(params.stakeAmount <= validator.stakeAmount, AmountExceedsStake());
+        require(params.stakeAmount >= config.minStakeAmount, MinStakeAmountRequired());
+
+        uint256 remaining = validator.stakeAmount - params.stakeAmount;
+        bool fullExit = remaining == 0;
+        if (!fullExit) {
+            require(remaining >= config.minStakeAmount, BelowMinimumStake());
+        }
+
         validator.unstakeAmount = params.stakeAmount;
+        validator.stakeExitTimestamp = block.timestamp + config.minUnstakeDelay;
 
         emit ValidatorCoolDown(
-            params.validator, validator.stakeVersion, validator.stakeTimestamp, block.timestamp
+            params.validator,
+            validator.stakeVersion,
+            validator.stakeTimestamp,
+            validator.stakeExitTimestamp
         );
     }
 
@@ -251,23 +270,17 @@ contract StakeManager is
 
         require(validator.stakeAmount > 0, ValidatorNotFound());
         require(validator.stakeExitTimestamp > 0, NotAllowed());
-        require(
-            block.timestamp >= validator.stakeExitTimestamp + ACTIVE_STAKING_CONFIG.minUnstakeDelay,
-            NotAllowed()
-        );
+        require(block.timestamp >= validator.stakeExitTimestamp, NotAllowed());
         require(validator.unstakeAmount > 0, NotAllowed());
 
         uint256 totalAmount = validator.unstakeAmount;
         uint256 rewardAmount = validator.balance;
         bool partialExit = _processUnstaking(validator);
+        bytes32 stakingVersion = validator.stakeVersion;
 
-        // Handle full vs partial exit
         if (!partialExit) {
             delete $.balances[who];
         } else {
-            require(
-                validator.stakeAmount >= ACTIVE_STAKING_CONFIG.minStakeAmount, BelowMinimumStake()
-            );
             validator.unstakeAmount = 0;
             validator.stakeExitTimestamp = 0;
         }
@@ -275,7 +288,7 @@ contract StakeManager is
         IERC20 token = IERC20(ACTIVE_STAKING_CONFIG.stakingToken);
         require(token.transfer(who, totalAmount), TransferFailed());
 
-        emit ValidatorExit(who, validator.stakeVersion, rewardAmount, partialExit);
+        emit ValidatorExit(who, stakingVersion, rewardAmount, partialExit);
     }
 
     /// @inheritdoc IStakeManager
@@ -365,15 +378,17 @@ contract StakeManager is
         _unpause();
     }
 
+    event TokenId(uint256 indexed tokenId);
     /// @notice Mint NFT and register new validator
     /// @param validator Address of the validator
     /// @param pubkey BLS public key of the validator
+
     function _mintValidatorNFT(address validator, uint256[4] memory pubkey) internal {
         uint256 tokenId = COUNTER++;
         SMStorage storage $ = __loadStorage();
         $.balances[validator].tokenId = tokenId;
         _mint(validator, tokenId);
-
+        emit TokenId(tokenId);
         IValidatorTypes.ValidatorInfo memory info = IValidatorTypes.ValidatorInfo({
             blsPublicKey: pubkey,
             wallet: validator,
@@ -441,10 +456,13 @@ contract StakeManager is
         require(totalStaked > 0, NoStakedAmount());
 
         uint256 epochsPerYear = manager.getEpochsPerYear();
-        uint256 epochReward = (totalStaked * REWARD_RATE) / (10000 * epochsPerYear);
+        uint256 denominator = 10000 * epochsPerYear;
+        uint256 epochReward = Math.mulDiv(totalStaked, REWARD_RATE, denominator);
 
         // Apply scaling to prevent excessive inflation
-        uint256 scalingFactor = _sqrt(totalStaked / SCALING_FACTOR);
+        uint256 scalingBase = totalStaked / 1000000;
+        uint256 scalingFactor = Math.sqrt(scalingBase);
+
         if (scalingFactor > 1) {
             epochReward = epochReward / scalingFactor;
         }
@@ -468,8 +486,11 @@ contract StakeManager is
         SMStorage storage $ = __loadStorage();
 
         for (uint256 i = 0; i < validators.length; i++) {
-            uint256 correctAttestations =
-                validators[i].attestationCount - validators[i].invalidAttestations;
+            uint256 correctAttestations = validators[i].attestationCount
+                > validators[i].invalidAttestations
+                ? validators[i].attestationCount - validators[i].invalidAttestations
+                : 0;
+
             uint256 stakeAmount = $.balances[validators[i].wallet].stakeAmount;
             totalPoints += _calculateValidatorPoints(stakeAmount, correctAttestations);
         }
@@ -498,30 +519,31 @@ contract StakeManager is
         for (uint256 i = 0; i < validators.length; i++) {
             IValidatorTypes.ValidatorInfo memory validatorInfo = validators[i];
 
-            uint256 correctAttestations =
-                validatorInfo.attestationCount - validatorInfo.invalidAttestations;
-            uint256 performanceScore = validatorInfo.attestationCount > 0
-                ? (correctAttestations * 100) / validatorInfo.attestationCount
+            uint256 correctAttestations = validatorInfo.attestationCount
+                > validatorInfo.invalidAttestations
+                ? validatorInfo.attestationCount - validatorInfo.invalidAttestations
                 : 0;
+
+            uint256 performanceScore = (validatorInfo.attestationCount == 0)
+                ? 0
+                : Math.mulDiv(correctAttestations, PERFORMANCE_SCALE, validatorInfo.attestationCount);
 
             require(performanceScore >= MIN_PERFORMANCE_THRESHOLD, LowPerformance());
 
-            ValidatorBalance storage validatorBalance = $.balances[validatorInfo.wallet];
+            ValidatorBalance storage balance = $.balances[validatorInfo.wallet];
 
-            // Calculate base reward
             uint256 validatorPoints =
-                _calculateValidatorPoints(validatorBalance.stakeAmount, correctAttestations);
-            uint256 finalReward = (rewardPool * validatorPoints) / totalPoints;
+                _calculateValidatorPoints(balance.stakeAmount, correctAttestations);
 
-            // Add early bonus if applicable
+            uint256 finalReward = Math.mulDiv(rewardPool, validatorPoints, totalPoints);
+
             uint256 earlyBonus =
-                _calculateEarlyBonus(validatorBalance.stakeTimestamp, currentEpoch, epochDuration);
-            finalReward += earlyBonus;
+                _calculateEarlyBonus(balance.stakeTimestamp, currentEpoch, epochDuration);
+            finalReward = finalReward + earlyBonus;
 
-            // Update validator balance
-            validatorBalance.balance += finalReward;
-            validatorBalance.lastRewardEpoch = currentEpoch;
-            distributedTotal += finalReward;
+            balance.balance = balance.balance + finalReward;
+            balance.lastRewardEpoch = currentEpoch;
+            distributedTotal = distributedTotal + finalReward;
 
             emit ValidatorRewarded(
                 validatorInfo.wallet, finalReward, performanceScore, correctAttestations
@@ -548,6 +570,16 @@ contract StakeManager is
         return stakePoints + performancePoints;
     }
 
+    /// @inheritdoc IStakeManager
+    function validatorBalance(address validator)
+        external
+        view
+        returns (ValidatorBalance memory info)
+    {
+        SMStorage storage $ = __loadStorage();
+        info = $.balances[validator];
+    }
+
     /// @notice Calculate early validator bonus
     /// @param stakeTimestamp When validator first staked
     /// @param currentEpoch Current epoch number
@@ -569,18 +601,6 @@ contract StakeManager is
 
         uint256 remainingBonusEpochs = EARLY_BONUS_EPOCHS - epochsStaked;
         return (EARLY_BONUS_AMOUNT * remainingBonusEpochs) / EARLY_BONUS_EPOCHS;
-    }
-
-    /// @notice Calculate square root using Newton's method
-    /// @param x Input value
-    /// @return y Square root of x
-    function _sqrt(uint256 x) internal pure returns (uint256 y) {
-        uint256 z = (x + 1) / 2;
-        y = x;
-        while (z < y) {
-            y = z;
-            z = (x / z + z) / 2;
-        }
     }
 
     /// @notice Authorize contract upgrades

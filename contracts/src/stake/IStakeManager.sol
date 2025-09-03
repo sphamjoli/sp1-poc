@@ -81,4 +81,12 @@ interface IStakeManager is IStakeManagerTypes {
     /// @param manager The new Validator address
     /// @dev Only owner can make this call
     function updateValidatorManager(address manager) external;
+
+    /// @notice Get ValidatorBalance
+    /// @param validator The validators address
+    /// @return  info {IStakeManagerTypes.ValidatorBalance}
+    function validatorBalance(address validator)
+        external
+        view
+        returns (ValidatorBalance calldata info);
 }

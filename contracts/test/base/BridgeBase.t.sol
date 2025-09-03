@@ -222,6 +222,7 @@ abstract contract BridgeBaseTest is Test, IBridgeUtils {
     /// @notice Begin an owner prank on the correct chain based on fork id
     /// @param forkId Fork identifier used to choose ownerA or ownerB
     function _prankOwnerOnChain(uint256 forkId) internal {
+        vm.selectFork(forkId);
         if (forkId == FORKA_ID) {
             vm.startPrank(ownerA);
         } else {
