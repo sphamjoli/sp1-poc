@@ -44,17 +44,15 @@ fn g2_to_words_solidity(p: &G2Affine) -> [U256; 4] {
     [x_re, x_im, y_re, y_im]
 }
 
-fn generate_single_case(wallet_address: &str) -> BlsTestData {
+fn generate_single_case(wallet_address: &str, chain_id: U256) -> BlsTestData {
     let kp: KeyPair = KeyPair::generate();
 
     let pk_affine: G2Affine = G2Affine::from(kp.public_key);
     let pk_words = g2_to_words_solidity(&pk_affine);
 
-    // abi.encodePacked(pk limbs, msg.sender)
     let sender = Address::from_str(wallet_address).expect("address");
     let message_bytes =
-        (pk_words[0], pk_words[1], pk_words[2], pk_words[3], sender).abi_encode_packed();
-
+        (chain_id, pk_words[0], pk_words[1], pk_words[2], pk_words[3], sender).abi_encode_packed();
     let exp = XMDExpander::<Keccak256>::new(DST.as_bytes(), 96);
 
     // H2C and PoP signature
@@ -86,17 +84,6 @@ fn generate_single_case(wallet_address: &str) -> BlsTestData {
     }
 }
 
-fn verify_g2_generator() {
-    let g2_gen = G2Affine::generator();
-    let g2_bytes = g2_gen.to_be_bytes();
-
-    println!("Sylow G2 generator (c0=imag, c1=real):");
-    println!("  x.c0 (im): {}", U256::from_be_slice(&g2_bytes[0..32]));
-    println!("  x.c1 (re): {}", U256::from_be_slice(&g2_bytes[32..64]));
-    println!("  y.c0 (im): {}", U256::from_be_slice(&g2_bytes[64..96]));
-    println!("  y.c1 (re): {}", U256::from_be_slice(&g2_bytes[96..128]));
-}
-
 fn main() {
     let wallets = [
         "0x328809Bc894f92807417D2dAD6b7C998c1aFdac6",
@@ -105,11 +92,10 @@ fn main() {
         "0x52d4630789F63F9C715a2D30fCe65727D009f8d9",
         "0x7c8999dC9a822c1f0Df42023113EDB4FDd543266",
     ];
-
+    let chain_id = U256::from(1);
     let mut out = Vec::with_capacity(wallets.len());
-    for w in wallets {
-        out.push(generate_single_case(w));
+    for wallet in wallets {
+        out.push(generate_single_case(wallet, chain_id));
     }
-    verify_g2_generator();
     fs::write("bls_test_data.json", serde_json::to_string_pretty(&out).unwrap()).expect("write");
 }

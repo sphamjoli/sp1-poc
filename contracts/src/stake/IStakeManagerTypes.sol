@@ -9,12 +9,8 @@ import {IValidatorTypes} from "../validator/IValidatorTypes.sol";
 interface IStakeManagerTypes {
     /// @notice Parameters for initiating validator unstaking process
     /// @param stakeAmount Amount of tokens to unstake (partial or full)
-    /// @param stakeVersion Configuration version hash that validator is staked under
-    /// @param validator Address of the validator initiating unstaking
     struct UnstakingParams {
         uint256 stakeAmount;
-        bytes32 stakeVersion;
-        address validator;
     }
 
     /// @notice Parameters for staking tokens as a validator
@@ -89,10 +85,13 @@ interface IStakeManagerTypes {
     /// @notice Internal storage structure for the stake manager
     /// @param balances Mapping of validator addresses to their balance information
     /// @param stakingManagerVersions used to store all the staking versions
+    /// @param rewardReserves used to store the balances for each reward token
     struct SMStorage {
         mapping(address validator => ValidatorBalance balance) balances;
         mapping(bytes32 version => StakeManagerConfig config) stakingManagerVersions;
-        uint256[50] __gap;
+        mapping(address token => uint256) rewardReserves;
+        mapping(address token => uint256) principal;
+        uint256[49] __gap;
     }
 
     /// @notice Parameters for slashing a misbehaving validator
@@ -155,6 +154,10 @@ interface IStakeManagerTypes {
     /// @notice Thrown when token transfer operation fails
     error TransferFailed();
 
+    /// @notice Thrown when reserve transfer didnt yield a difference
+    error NotReservesRecieved();
+    error NoAccessReserves();
+
     /// @notice Thrown when validator has no rewards to claim
     error NoRewardsToClaim();
 
@@ -187,6 +190,11 @@ interface IStakeManagerTypes {
     error NoValidators();
     error NoStakedAmount();
     error DivisionFailed();
+    error EpochDurationMisMatch();
+    error AlreadyRewardedThisEpoch();
+    /// @notice Thrown when the validator tries to top up using a different
+    /// staking version to the one they already used to stake originally
+    error MigrateToNewVersion();
     // ========== EVENTS ==========
 
     /// @notice Emitted when a validator stakes tokens
@@ -243,11 +251,9 @@ interface IStakeManagerTypes {
     /// @notice Emitted when rewards are allocated to a validator
     /// @param validator Address of the validator
     /// @param reward Amount of rewards allocated
+    /// @param correctAttestations The number of attestions which were correct
     event ValidatorRewarded(
-        address indexed validator,
-        uint256 indexed performanceScore,
-        uint256 indexed reward,
-        uint256 correctAttestations
+        address indexed validator, uint256 indexed reward, uint256 correctAttestations
     );
 
     /// @notice Emitted when rewards are distributed to validators
@@ -278,4 +284,10 @@ interface IStakeManagerTypes {
         uint256 newStakeAmount,
         uint256 when
     );
+
+    /// @notice Emitted when rewards budget is topped up
+    /// @param token ERC20 token address
+    /// @param amountReceived Actual amount received by the contract
+    /// @param funder Msg.sender that provided the funds
+    event RewardTopUp(address indexed token, uint256 amountReceived, address indexed funder);
 }

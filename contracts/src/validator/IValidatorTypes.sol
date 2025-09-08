@@ -38,6 +38,7 @@ interface IValidatorTypes {
     /// @notice Thrown when msg.sender is not the StakeManager contract
     error NotStakeManager(address caller);
 
+    error UnableToRemoveValidator();
     // ========== ENUMS ==========
 
     /// @notice Validator status enumeration

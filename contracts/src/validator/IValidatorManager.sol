@@ -35,10 +35,9 @@ import {IValidatorTypes} from "./IValidatorTypes.sol";
 
 interface IValidatorManager is IValidatorTypes {
     /// @notice Initialize the ValidatorManager contract
-    /// @param stakingManager Address of the staking manager
     /// @param verifier SP1VerifierGateway which can be used to verify proofs for any version of SP1
     /// @param programKey The verification key for the Bridge
-    function initialize(address stakingManager, address verifier, bytes32 programKey) external;
+    function initialize(address verifier, bytes32 programKey) external;
 
     /// @notice Submit bridge state root attestation
     /// @param attestation Signed attestation of bridge state - see {IValidatorTypes.BridgeAttestation}
@@ -114,7 +113,21 @@ interface IValidatorManager is IValidatorTypes {
     /// @dev Only owner can make this call
     function updateStakingManager(address stakingManager) external;
 
+    /// @notice Number of full epochs that have elapsed since `timestamp`.
+    /// @dev Epoch length is `epochDuration()` seconds. Computed as
+    /// `floor((block.timestamp - timestamp) / epochDuration())`.
+    /// If `timestamp >= block.timestamp`, returns 0. This value is derived
+    /// from wall-clock time and is independent of the 1-based `EPOCH` counter.
+    /// @param timestamp Unix time in seconds (UTC) to measure from. ideally this is block.timestamp
+    /// @return epochs The count of elapsed epochs, truncated toward zero.
+    function epochsElapsedSince(uint256 timestamp) external view returns (uint256 epochs);
+
     /// @notice Allows an admin to update the program key
     /// @param programKey The verification key for the Bridge i.e RISC-V program.
     function updateProgramKey(bytes32 programKey) external;
+
+    /// @notice Allows admin and stake manager to update the status of any validator
+    /// @param validator The validators wallet address
+    /// @param status The status to update the validator to
+    function updateValidatorStatus(address validator, ValidatorStatus status) external;
 }

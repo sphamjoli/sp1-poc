@@ -25,9 +25,8 @@ interface IStakeManager is IStakeManagerTypes {
     function beginUnstaking(UnstakingParams memory params) external;
 
     /// @notice Complete unstaking and withdraw tokens after cooldown period
-    /// @param who Address of the validator to complete unstaking
     /// @dev Can only be called after minUnstakeDelay has elapsed
-    function completeUnstaking(address who) external;
+    function completeUnstaking() external;
 
     /// @notice Update staking configuration parameters
     /// @param config New configuration parameters
@@ -89,4 +88,13 @@ interface IStakeManager is IStakeManagerTypes {
         external
         view
         returns (ValidatorBalance calldata info);
+
+    ///@notice Allows owner to topup reward token balance on the contract
+    ///@dev Only owner can make this call
+    function transferToken(address token, uint256 amount) external;
+
+    /// @notice Withdraw surplus not committed to principal/pending/accrued reserves
+    /// @param token ERC20 token
+    /// @param amount Max amount to withdraw
+    function sweepExcess(address token, uint256 amount) external;
 }

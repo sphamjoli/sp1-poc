@@ -104,6 +104,27 @@ abstract contract BridgeBaseTest is Test, IBridgeUtils {
         assertEq(TOKEN_CHAINA.name(), "TOKEN Chain A");
         assertEq(TOKEN_CHAINA.symbol(), "TKCA");
     }
+    /// @notice Deploys a token
+    /// @param sender The address to use to deploy
+    /// @param forkId The fork to use to deploy
+    /// @param name The name of the token
+    /// @param symbol The symbol for the token
+
+    function _deployToken(
+        address sender,
+        uint256 forkId,
+        string memory name,
+        string memory symbol
+    )
+        internal
+        returns (BridgeToken)
+    {
+        vm.startPrank(sender);
+        vm.selectFork(forkId);
+        BridgeToken token = new BridgeToken(name, symbol);
+        token.mint(sender, defaultOwnerTokenBalance);
+        return token;
+    }
 
     /// @notice Deploy token and bridge contracts on Chain A and initialize local state
     /// @dev Deploys a UUPS proxy for Bridge with ownerA as the initial owner and initializes the SMT.

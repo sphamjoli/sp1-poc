@@ -19,25 +19,27 @@ contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
     using BLS for *;
 
     /// @dev Maximum iterations allowed when scanning JSON arrays to prevent infinite loops
-    uint256 private constant MAX_JSON_SCAN_ITERATIONS = 1000;
+    uint256 internal constant MAX_JSON_SCAN_ITERATIONS = 1000;
 
     /// @dev Default test configuration values
-    uint256 private constant DEFAULT_MIN_STAKE = 100 ether;
-    uint256 private constant DEFAULT_MIN_WITHDRAW = 1 ether;
-    uint256 private constant DEFAULT_UNSTAKE_DELAY = 2 days;
-    uint256 private constant DEFAULT_PROOF_REWARD = 1 ether;
-    uint256 private constant DEFAULT_PROOF_PENALTY = 2 ether;
-    uint32 private constant DEFAULT_MAX_MISSED_PROOFS = 5;
-    uint32 private constant DEFAULT_SLASHING_RATE = 1000;
+    uint256 internal constant DEFAULT_MIN_STAKE = 100 ether;
+    uint256 internal constant DEFAULT_MIN_WITHDRAW = 1 ether;
+    uint256 internal constant DEFAULT_UNSTAKE_DELAY = 2 days;
+    uint256 internal constant DEFAULT_PROOF_REWARD = 1 ether;
+    uint256 internal constant DEFAULT_PROOF_PENALTY = 2 ether;
+    uint256 internal constant DEFAULT_REWARD_BALANCE = 10_000_000 ether;
+
+    uint32 internal constant DEFAULT_MAX_MISSED_PROOFS = 5;
+    uint32 internal constant DEFAULT_SLASHING_RATE = 1000;
 
     /// @dev JSON parsing constants
-    uint8 private constant JSON_SPACE = 0x20;
-    uint8 private constant JSON_TAB = 0x09;
-    uint8 private constant JSON_NEWLINE = 0x0A;
-    uint8 private constant JSON_CARRIAGE_RETURN = 0x0D;
+    uint8 internal constant JSON_SPACE = 0x20;
+    uint8 internal constant JSON_TAB = 0x09;
+    uint8 internal constant JSON_NEWLINE = 0x0A;
+    uint8 internal constant JSON_CARRIAGE_RETURN = 0x0D;
 
     /// @notice '['
-    uint8 private constant JSON_ARRAY_START = 0x5B;
+    uint8 internal constant JSON_ARRAY_START = 0x5B;
 
     /// @notice StakeManager contract instance for Chain A
     StakeManager public stakeManagerA;
@@ -255,11 +257,13 @@ contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         );
         address validatorManagerAddr = Upgrades.deployUUPSProxy(
             "ValidatorManager.sol",
-            abi.encodeCall(ValidatorManager.initialize, (address(0), SP1_VERIFIER, PROGRAM_VKEY)),
+            abi.encodeCall(ValidatorManager.initialize, (SP1_VERIFIER, PROGRAM_VKEY)),
             options
         );
         validatorManager = ValidatorManager(validatorManagerAddr);
         stakeManager = StakeManager(stakeManagerAddr);
+        BridgeToken(_stakingToken).approve(stakeManagerAddr, type(uint256).max);
+        stakeManager.transferToken(_stakingToken, DEFAULT_REWARD_BALANCE);
         stakeManager.updateValidatorManager(validatorManagerAddr);
         validatorManager.updateStakingManager(stakeManagerAddr);
         configVersion = stakeManager.getStakeVersion(config);
@@ -292,7 +296,6 @@ contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
 
         if (forkId == FORKA_ID) {
             TOKEN_CHAINA.approve(address(stakeManagerA), amount);
-            require(validatorManagerA.STAKING_MANAGER() == address(stakeManagerA), "Hmmmmm");
             StakeParams memory params =
                 StakeParams({stakeAmount: amount, stakeVersion: testConfigVersionA});
             BlsOwnerShip memory proof = BlsOwnerShip({signature: signature, pubkey: pubkey});
@@ -327,16 +330,9 @@ contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
 
         vm.selectFork(forkId);
 
-        UnstakingParams memory params = UnstakingParams({
-            stakeAmount: amount,
-            stakeVersion: forkId == FORKA_ID ? testConfigVersionA : testConfigVersionB,
-            validator: validator
-        });
+        UnstakingParams memory params = UnstakingParams({stakeAmount: amount});
 
-        address manager =
-            forkId == FORKA_ID ? address(validatorManagerA) : address(validatorManagerB);
-
-        vm.prank(manager);
+        vm.prank(validator);
 
         if (forkId == FORKA_ID) {
             stakeManagerA.beginUnstaking(params);
@@ -351,7 +347,14 @@ contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
     /// @dev Uses the validator's BLS data to create reward distribution parameters
     /// @param validator The address of the validator receiving rewards
     /// @param forkId The fork identifier where rewards are distributed
-    function _distributeRewardsToValidator(address validator, uint256 forkId) internal {
+    /// @param epoch The current epoch to use
+    function _distributeRewardsToValidator(
+        address validator,
+        uint256 forkId,
+        uint256 epoch
+    )
+        internal
+    {
         require(validator != address(0), "Invalid validator address");
 
         BlsTestData memory data = validatorBlsData[validator];
@@ -373,7 +376,7 @@ contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         });
 
         RewardsParams memory params =
-            RewardsParams({recipients: validators, epoch: 1, epochDuration: 600});
+            RewardsParams({recipients: validators, epoch: epoch, epochDuration: 600});
 
         address manager =
             forkId == FORKA_ID ? address(validatorManagerA) : address(validatorManagerB);

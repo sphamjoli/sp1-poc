@@ -12,6 +12,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ValidatorManagerStorage} from "./ValidatorManagerStorage.sol";
 import {BLS} from "solbls/BLS.sol";
 import {IStakeManager, IStakeManagerTypes} from "../stake/IStakeManager.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title Validator Manager
 /// @notice Manages validator lifecycle and bridge state attestations
@@ -60,6 +61,8 @@ contract ValidatorManager is
     /// @notice Duration of each epoch in seconds
     uint256 public EPOCH_DURATION;
 
+    uint256 public EPOCH_ZERO_TS;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         CHAIN_ID = block.chainid;
@@ -67,22 +70,12 @@ contract ValidatorManager is
     }
 
     /// @inheritdoc IValidatorManager
-    function initialize(
-        address stakingManager,
-        address verifier,
-        bytes32 programKey
-    )
-        external
-        override
-        initializer
-    {
-        require(verifier != address(0), ZeroAddress());
-
+    function initialize(address verifier, bytes32 programKey) external override initializer {
         SP1_VERIFIER = verifier;
         NAME = "ValidatorManager";
         VERSION = "1";
         POP_ATTEST_DOMAIN = "ValidatorManager:BN254:PoP:v1:";
-
+        EPOCH_ZERO_TS = block.timestamp;
         EPOCH = 1;
         EPOCH_DURATION = 10 minutes;
 
@@ -90,11 +83,11 @@ contract ValidatorManager is
         __Pausable_init();
         __UUPSUpgradeable_init();
         updateProgramKey(programKey);
-        updateStakingManager(stakingManager);
     }
 
     /// @inheritdoc IValidatorManager
     function updateStakingManager(address stakingManager) public onlyOwner {
+        require(stakingManager != address(0), ZeroAddress());
         emit UpdatedStakingManager(STAKING_MANAGER, stakingManager);
         STAKING_MANAGER = stakingManager;
     }
@@ -105,7 +98,7 @@ contract ValidatorManager is
         override
         whenNotPaused
     {
-        VMStorage storage $ = __loadStorage();
+        VMStorage storage $ = _loadStorage();
 
         require(msg.sender == attestation.validator, NotAllowed());
         require($.validators[msg.sender].status == ValidatorStatus.Active, ValidatorNotRegistered());
@@ -136,7 +129,7 @@ contract ValidatorManager is
         override
         whenNotPaused
     {
-        VMStorage storage $ = __loadStorage();
+        VMStorage storage $ = _loadStorage();
 
         require(attestation.participants.length > 0, NoParticipants());
 
@@ -176,9 +169,23 @@ contract ValidatorManager is
         override
         returns (bool verified)
     {
-        VMStorage storage $ = __loadStorage();
+        VMStorage storage $ = _loadStorage();
         bytes32 attestationKey = keccak256(abi.encode(params.chainId, params.bridgeRoot));
         return $.preConfirmations[attestationKey].confirmed;
+    }
+
+    /// @inheritdoc IValidatorManager
+    function updateValidatorStatus(
+        address validator,
+        ValidatorStatus status
+    )
+        external
+        override
+        onlyStakeManager
+    {
+        VMStorage storage $ = _loadStorage();
+        ValidatorInfo storage info = $.validators[validator];
+        info.status = status;
     }
 
     /// @inheritdoc IValidatorManager
@@ -188,19 +195,19 @@ contract ValidatorManager is
         override
         returns (ValidatorInfo memory info)
     {
-        VMStorage storage $ = __loadStorage();
+        VMStorage storage $ = _loadStorage();
         return $.validators[validator];
     }
 
     /// @inheritdoc IValidatorManager
     function getActiveValidators() external view override returns (address[] memory validators) {
-        VMStorage storage $ = __loadStorage();
+        VMStorage storage $ = _loadStorage();
         return $.activeValidators.values();
     }
 
     /// @inheritdoc IValidatorManager
     function finaliseAttestations(VerificationParams calldata params) external override onlyOwner {
-        VMStorage storage $ = __loadStorage();
+        VMStorage storage $ = _loadStorage();
 
         ISP1Verifier(SP1_VERIFIER).verifyProof(PROGRAM_KEY, params.publicValues, params.proofBytes);
 
@@ -262,7 +269,6 @@ contract ValidatorManager is
         returns (uint256[2] memory)
     {
         bytes memory messageBytes = abi.encodePacked(
-            POP_ATTEST_DOMAIN,
             attestation.aggregatedPublicKey[0],
             attestation.aggregatedPublicKey[1],
             attestation.aggregatedPublicKey[2],
@@ -279,12 +285,9 @@ contract ValidatorManager is
 
     /// @inheritdoc IValidatorManager
     function addValidator(ValidatorInfo memory info) external override onlyStakeManager {
-        VMStorage storage $ = __loadStorage();
+        VMStorage storage $ = _loadStorage();
         require($.validators[info.wallet].status == ValidatorStatus.Inactive, NotAllowed());
-
         $.validators[info.wallet] = info;
-        $.validators[info.wallet].attestationCount = 0;
-        $.validators[info.wallet].status = ValidatorStatus.Active;
         $.activeValidators.add(info.wallet);
 
         emit AddedValidator(info.wallet, info.blsPublicKey);
@@ -292,9 +295,10 @@ contract ValidatorManager is
 
     /// @inheritdoc IValidatorManager
     function removeValidator(address validator) external override onlyStakeManager {
-        VMStorage storage $ = __loadStorage();
-        require($.validators[validator].status == ValidatorStatus.Unstaking, NotAllowed());
-
+        VMStorage storage $ = _loadStorage();
+        require(
+            $.validators[validator].status == ValidatorStatus.Unstaking, UnableToRemoveValidator()
+        );
         $.activeValidators.remove(validator);
         ValidatorInfo memory info = $.validators[validator];
         delete $.validators[validator];
@@ -321,7 +325,7 @@ contract ValidatorManager is
 
     /// @inheritdoc IValidatorManager
     function distributeRewards() external override onlyOwner whenNotPaused {
-        VMStorage storage $ = __loadStorage();
+        VMStorage storage $ = _loadStorage();
         address[] memory activeValidators = $.activeValidators.values();
 
         require(activeValidators.length > 0, NoParticipants());
@@ -364,6 +368,12 @@ contract ValidatorManager is
     /// @notice Increment epoch and emit event
     function _updateEpoch() internal {
         emit NewEpoch(EPOCH, ++EPOCH);
+    }
+
+    /// @inheritdoc IValidatorManager
+    function epochsElapsedSince(uint256 timestamp) public view override returns (uint256 epochs) {
+        if (block.timestamp <= timestamp || EPOCH_DURATION == 0) return 0;
+        epochs = Math.saturatingSub(block.timestamp, timestamp) / EPOCH_DURATION;
     }
 
     /// @notice Authorize contract upgrades

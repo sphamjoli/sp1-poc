@@ -26,7 +26,7 @@ abstract contract StakeManagerStorage is IStakeManagerTypes {
 
     /// @notice Get StakeManager storage
     /// @return $ Storage struct
-    function __loadStorage() internal pure returns (SMStorage storage $) {
+    function _loadStorage() internal pure returns (SMStorage storage $) {
         bytes32 position = SM_STORAGE_SLOT;
         assembly {
             $.slot := position

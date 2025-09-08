@@ -25,7 +25,7 @@ abstract contract ValidatorManagerStorage is IValidatorTypes {
 
     /// @notice Get Validator Manager storage
     /// @return $ Storage struct
-    function __loadStorage() internal pure returns (VMStorage storage $) {
+    function _loadStorage() internal pure returns (VMStorage storage $) {
         bytes32 position = VM_STORAGE_SLOT;
         assembly {
             $.slot := position
