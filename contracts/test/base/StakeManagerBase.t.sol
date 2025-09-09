@@ -14,7 +14,7 @@ import "./BridgeBase.t.sol";
 /// @title StakeManagerBaseTest
 /// @notice Base test contract for StakeManager functionality with BLS signature support
 /// @dev Extends BridgeBaseTest to provide dual-chain testing capabilities for staking operations
-contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
+abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
     using stdJson for string;
     using BLS for *;
 

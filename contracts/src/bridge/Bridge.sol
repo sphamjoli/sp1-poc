@@ -15,7 +15,8 @@ import {IValidatorManager, IValidatorTypes} from "../validator/ValidatorManager.
 /// @author brianspha
 /// @notice Cross-chain bridge implementation with symmetric tree architecture
 /// @dev Handles both deposits (source chain) and claims (destination chain)
-
+/// @dev THe current version doesnt align with the latest design as it was used
+/// To build a POC still needs major updating :XD
 contract Bridge is
     IBridge,
     BridgeStorage,
