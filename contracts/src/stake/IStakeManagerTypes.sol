@@ -5,32 +5,33 @@ import {IValidatorTypes} from "../validator/IValidatorTypes.sol";
 
 /// @title Stake Manager Types
 /// @author brianspha
-/// @notice Type definitions for the stake manager system
+/// @notice Common types, events, and errors for the staking subsystem
+/// @dev Shared by stake manager contracts for a consistent ABI
 interface IStakeManagerTypes {
-    /// @notice Parameters for initiating validator unstaking process
-    /// @param stakeAmount Amount of tokens to unstake (partial or full)
+    /// @notice Parameters for initiating an unstake
+    /// @param stakeAmount Amount of stake to begin unstaking
     struct UnstakingParams {
         uint256 stakeAmount;
     }
 
-    /// @notice Parameters for staking tokens as a validator
-    /// @param stakeAmount Amount of tokens to stake (must meet minimum requirements)
-    /// @param stakeVersion Version hash of the staking configuration
+    /// @notice Parameters for staking
+    /// @param stakeAmount Amount of tokens to stake
+    /// @param stakeVersion Version hash of the active staking config
     struct StakeParams {
         uint256 stakeAmount;
         bytes32 stakeVersion;
     }
 
-    /// @notice Validator's balance and staking information
-    /// @param balance Pending reward balance available for claiming
-    /// @param stakeAmount Current amount of tokens staked
-    /// @param stakeVersion Configuration version when validator staked
-    /// @param stakeTimestamp When the validator first staked (for reward calculations)
-    /// @param stakeExitTimestamp When unstaking was initiated (0 if not unstaking)
-    /// @param tokenId NFT id issue to the user when they stake
-    /// @param unstakeAmount The amount the validator is unstaking reset after unstaking cycle completes
-    /// @param pubkey Validator's BLS public key
-    /// @param The last valid epoc the validator got rewards in
+    /// @notice Validator balance and staking state
+    /// @param balance Pending rewards available to claim
+    /// @param stakeAmount Amount currently staked
+    /// @param stakeVersion Config version used when staking
+    /// @param stakeTimestamp Timestamp of initial stake
+    /// @param stakeExitTimestamp Timestamp when unstake was initiated (0 if none)
+    /// @param tokenId NFT id issued at stake time
+    /// @param unstakeAmount Amount currently in the unstake process
+    /// @param lastRewardEpoch Last epoch in which rewards were earned
+    /// @param pubkey Validator BLS public key
     struct ValidatorBalance {
         uint256 balance;
         uint256 stakeAmount;
@@ -43,26 +44,26 @@ interface IStakeManagerTypes {
         uint256[4] pubkey;
     }
 
-    /// @notice Parameters for distributing rewards to validators
-    /// @param recipients Array of validator information eligible for rewards
-    /// @param epoch Rpresents the current epoch
-    /// @param epochDuration The time it takes for each epoch to complete
-    /// @dev Individual reward amounts calculated based on stake and time
+    /// @notice Parameters for distributing rewards
+    /// @param recipients Validators eligible for rewards
+    /// @param epoch Current epoch id
+    /// @param epochDuration Epoch duration in seconds
+    /// @dev Individual rewards typically depend on stake and time
     struct RewardsParams {
         IValidatorTypes.ValidatorInfo[] recipients;
         uint256 epoch;
         uint256 epochDuration;
     }
 
-    /// @notice Configuration parameters for the staking system
-    /// @param minStakeAmount Minimum tokens required to become a validator
-    /// @param minWithdrawAmount Minimum amount for withdrawal operations
-    /// @param minUnstakeDelay Cooldown period before unstaking completion (seconds)
-    /// @param correctProofReward Reward amount for correct proof submissions
-    /// @param incorrectProofPenalty Penalty amount for incorrect proof submissions
-    /// @param maxMissedProofs Maximum missed proofs before potential slashing
-    /// @param slashingRate Percentage of stake to slash for severe violations
-    /// @param stakingToken Address of the ERC20 token used for staking
+    /// @notice Staking configuration
+    /// @param minStakeAmount Minimum required stake
+    /// @param minWithdrawAmount Minimum amount that can be withdrawn
+    /// @param minUnstakeDelay Unstake cooldown in seconds
+    /// @param correctProofReward Reward for correct proof submission
+    /// @param incorrectProofPenalty Penalty for incorrect proof submission
+    /// @param maxMissedProofs Max missed proofs allowed before action
+    /// @param slashingRate Slash percentage for severe violations
+    /// @param stakingToken ERC20 token used for staking
     struct StakeManagerConfig {
         uint256 minStakeAmount;
         uint256 minWithdrawAmount;
@@ -74,18 +75,20 @@ interface IStakeManagerTypes {
         address stakingToken;
     }
 
-    /// @notice BLS signature proof for public key ownership
-    /// @param signature BLS signature proving ownership of the public key
-    /// @param pubkey BLS public key being claimed
+    /// @notice BLS ownership proof
+    /// @param signature BLS signature
+    /// @param pubkey BLS public key being proven
     struct BlsOwnerShip {
         uint256[2] signature;
         uint256[4] pubkey;
     }
 
-    /// @notice Internal storage structure for the stake manager
-    /// @param balances Mapping of validator addresses to their balance information
-    /// @param stakingManagerVersions used to store all the staking versions
-    /// @param rewardReserves used to store the balances for each reward token
+    /// @notice Internal storage layout
+    /// @param balances Map of validator address to balance data
+    /// @param stakingManagerVersions Map of version hash to config
+    /// @param rewardReserves Token reserves available for rewards
+    /// @param principal Total staked principal per token
+    /// @param __gap Reserved for future storage
     struct SMStorage {
         mapping(address validator => ValidatorBalance balance) balances;
         mapping(bytes32 version => StakeManagerConfig config) stakingManagerVersions;
@@ -94,114 +97,133 @@ interface IStakeManagerTypes {
         uint256[49] __gap;
     }
 
-    /// @notice Parameters for slashing a misbehaving validator
-    /// @param validator Address of the validator to slash
-    /// @param slashAmount Amount of stake to remove (determined by validator manager)
+    /// @notice Parameters for slashing
+    /// @param validator Address to slash
+    /// @param slashAmount Amount of stake to slash
     struct SlashParams {
         address validator;
         uint256 slashAmount;
     }
 
-    // ========== ERRORS ==========
-    /// @notice Thrown when a validators doesnt meet the min performance threshold
-    /// for rewards
+    /// @notice Validator performance below reward threshold
     error LowPerformance();
-    /// @notice Thrown when caller lacks required permissions
+
+    /// @notice Caller lacks permission
     error NotAllowed();
 
-    /// @notice Thrown when a zero address is provided where not allowed
+    /// @notice Zero address not allowed
     error ZeroAddress();
 
-    /// @notice Thrown when BLS ownership proof verification fails
+    /// @notice BLS ownership proof failed
     error NotOwnerBLS();
 
-    /// @notice Thrown when caller is not the stake manager
+    /// @notice Caller is not the stake manager
     error NotStakeManager();
 
-    /// @notice Thrown when caller is not the validator manager
+    /// @notice Caller is not the validator manager
     error NotValidatorManager();
 
-    /// @notice Thrown when stake version doesn't match current configuration
+    /// @notice Provided stake version is invalid
     error InvalidStakeVersion();
 
-    /// @notice Thrown when stake amount is below minimum requirement
+    /// @notice Stake amount below minimum
     error MinStakeAmountRequired();
 
-    /// @notice Thrown when stake amount is greater than current staked amount
+    /// @notice Unstake amount exceeds current stake
     error AmountExceedsStake();
 
-    /// @notice Thrown when insufficient token approval for staking
+    /// @notice Insufficient token allowance for staking
     error NotApproved();
 
-    /// @notice Thrown when array parameters have mismatched lengths
+    /// @notice Array parameter lengths mismatch
     error ArrayLengthMismatch();
 
-    /// @notice Thrown when reward distribution has no recipients
+    /// @notice No recipients provided for reward distribution
     error NoRecipients();
 
-    /// @notice Thrown when calculated reward amount is zero
+    /// @notice Computed reward is zero
     error ZeroReward();
 
-    /// @notice Thrown when calculated total doesn't match expected total
+    /// @notice Totals do not match expected values
     error TotalMismatch();
 
-    /// @notice Thrown when reward token transfer fails
+    /// @notice Reward token transfer failed
     error RewardTransferFailed();
 
-    /// @notice Thrown when duplicate recipients found in reward distribution
+    /// @notice Duplicate recipients detected
     error DuplicateRecipient();
 
-    /// @notice Thrown when token transfer operation fails
+    /// @notice Generic token transfer failed
     error TransferFailed();
 
-    /// @notice Thrown when reserve transfer didnt yield a difference
+    /// @notice Top-up did not increase reserves
     error NotReservesRecieved();
+
+    /// @notice No access to reserves
     error NoAccessReserves();
 
-    /// @notice Thrown when validator has no rewards to claim
+    /// @notice No rewards available to claim
     error NoRewardsToClaim();
 
-    /// @notice Thrown when invalid validator address provided for slashing
+    /// @notice Invalid validator address
     error InvalidValidator();
 
-    /// @notice Thrown when slashing amount is zero
+    /// @notice Slash amount is zero
     error ZeroSlashAmount();
 
-    /// @notice Thrown when attempting to slash non-existent validator
+    /// @notice Validator not found
     error ValidatorNotFound();
 
-    /// @notice Thrown when slashing amount exceeds validator's stake
+    /// @notice Slash exceeds validator stake
     error InsufficientStakeToSlash();
 
-    /// @notice Thrown when remaining stake after slashing is below minimum
+    /// @notice Remaining stake after slash below minimum
     error BelowMinimumStake();
 
-    /// @notice thrown when the provided BLS pub key is invalid
+    /// @notice Invalid BLS public key
     error InvalidPublicKey();
 
-    /// @notice thrown when the provided BLS signature is invalid
+    /// @notice Invalid BLS signature
     error InvalidSignature();
 
-    /// @notice Thrown when an incorrect staking version is supplied/used
-    error InvalidStakingConfig();
-    error InvalidBLSSignature();
-    error InsufficientTreasury();
-    error NoEligibleValidators();
-    error NoValidators();
-    error NoStakedAmount();
-    error DivisionFailed();
-    error EpochDurationMisMatch();
-    error AlreadyRewardedThisEpoch();
-    /// @notice Thrown when the validator tries to top up using a different
-    /// staking version to the one they already used to stake originally
-    error MigrateToNewVersion();
-    // ========== EVENTS ==========
+    /// @notice Contract has no reward reserves
+    error NoRewards();
 
-    /// @notice Emitted when a validator stakes tokens
-    /// @param walletAddress Address of the validator
+    /// @notice Staking configuration invalid
+    error InvalidStakingConfig();
+
+    /// @notice Invalid BLS signature provided
+    error InvalidBLSSignature();
+
+    /// @notice Treasury balance insufficient
+    error InsufficientTreasury();
+
+    /// @notice No eligible validators for rewards
+    error NoEligibleValidators();
+
+    /// @notice No validators present
+    error NoValidators();
+
+    /// @notice No staked amount for operation
+    error NoStakedAmount();
+
+    /// @notice Division operation failed
+    error DivisionFailed();
+
+    /// @notice Epoch duration mismatch
+    error EpochDurationMisMatch();
+
+    /// @notice Validator already rewarded in this epoch
+    error AlreadyRewardedThisEpoch();
+
+    /// @notice Staking version differs from validator’s current version
+    error MigrateToNewVersion();
+
+    /// @notice Emitted when a validator stakes
+    /// @param walletAddress Validator address
     /// @param stakeVersion Configuration version hash
-    /// @param stakeAmount Amount of tokens staked
-    /// @param stakeTimestamp When the staking occurred
+    /// @param stakeAmount Amount staked
+    /// @param stakeTimestamp Timestamp of staking
     event ValidatorStaked(
         address indexed walletAddress,
         bytes32 indexed stakeVersion,
@@ -209,11 +231,11 @@ interface IStakeManagerTypes {
         uint256 stakeTimestamp
     );
 
-    /// @notice Emitted when a validator completes unstaking
-    /// @param walletAddress Address of the validator
+    /// @notice Emitted when a validator finishes an exit
+    /// @param walletAddress Validator address
     /// @param stakeVersion Configuration version hash
-    /// @param rewards Final reward amount received
-    /// @param isPartial if the validator withdrew all their funds
+    /// @param rewards Final rewards paid
+    /// @param isPartial True if a partial exit
     event ValidatorExit(
         address indexed walletAddress,
         bytes32 indexed stakeVersion,
@@ -221,11 +243,11 @@ interface IStakeManagerTypes {
         bool isPartial
     );
 
-    /// @notice Emitted when a validator begins unstaking cooldown
-    /// @param walletAddress Address of the validator
+    /// @notice Emitted when an unstake cooldown begins
+    /// @param walletAddress Validator address
     /// @param stakeVersion Configuration version hash
     /// @param stakeTimestamp Original stake timestamp
-    /// @param stakeExitTimestamp When unstaking was initiated
+    /// @param stakeExitTimestamp Cooldown start timestamp
     event ValidatorCoolDown(
         address indexed walletAddress,
         bytes32 indexed stakeVersion,
@@ -233,50 +255,50 @@ interface IStakeManagerTypes {
         uint256 stakeExitTimestamp
     );
 
-    /// @notice Emitted when the Validator manager address is updated
-    /// @param currentValidatorManager Currently set manageraddress
+    /// @notice Emitted when the validator manager address changes
+    /// @param currentValidatorManager Previous manager address
     /// @param newValidatorManager New manager address
     event UpdatedValidatorManager(
         address indexed currentValidatorManager, address indexed newValidatorManager
     );
 
-    /// @notice Emitted when a validator claims their rewards
-    /// @param validator Address of the validator
-    /// @param reward Amount of rewards claimed
-    /// @param when Timestamp of the claim
+    /// @notice Emitted when a validator claims rewards
+    /// @param validator Validator address
+    /// @param reward Amount claimed
+    /// @param when Claim timestamp
     event ValidatorRewardsClaimed(
         address indexed validator, uint256 indexed reward, uint256 indexed when
     );
 
     /// @notice Emitted when rewards are allocated to a validator
-    /// @param validator Address of the validator
-    /// @param reward Amount of rewards allocated
-    /// @param correctAttestations The number of attestions which were correct
+    /// @param validator Validator address
+    /// @param reward Amount allocated
+    /// @param correctAttestations Count of correct attestations
     event ValidatorRewarded(
         address indexed validator, uint256 indexed reward, uint256 correctAttestations
     );
 
-    /// @notice Emitted when rewards are distributed to validators
-    /// @param total Total amount of rewards distributed
-    /// @param totalValidator Number of validators that received rewards
-    /// @param when Timestamp of the distribution
+    /// @notice Emitted when rewards are distributed
+    /// @param total Total rewards distributed
+    /// @param totalValidator Number of validators paid
+    /// @param when Distribution timestamp
     event RewardsDistributed(
         uint256 indexed total, uint256 indexed totalValidator, uint256 indexed when
     );
 
-    /// @notice Emitted when stake manager configuration is updated
-    /// @param oldConfig Previous configuration
-    /// @param newConfig New configuration
+    /// @notice Emitted when stake manager config updates
+    /// @param oldConfig Previous config
+    /// @param newConfig New config
     event StakeManagerConfigUpdated(
         StakeManagerConfig indexed oldConfig, StakeManagerConfig indexed newConfig
     );
 
-    /// @notice Emitted when a validator is slashed for misbehavior
-    /// @param validator Address of the slashed validator
-    /// @param slashAmount Amount of stake slashed
-    /// @param originalStake Validator's stake before slashing
-    /// @param newStakeAmount Validator's stake after slashing
-    /// @param when Timestamp of the slashing
+    /// @notice Emitted when a validator is slashed
+    /// @param validator Validator address
+    /// @param slashAmount Amount slashed
+    /// @param originalStake Stake before slashing
+    /// @param newStakeAmount Stake after slashing
+    /// @param when Timestamp of slashing
     event ValidatorSlashed(
         address indexed validator,
         uint256 indexed slashAmount,
@@ -285,9 +307,9 @@ interface IStakeManagerTypes {
         uint256 when
     );
 
-    /// @notice Emitted when rewards budget is topped up
-    /// @param token ERC20 token address
-    /// @param amountReceived Actual amount received by the contract
-    /// @param funder Msg.sender that provided the funds
+    /// @notice Emitted when rewards reserves are topped up
+    /// @param token ERC20 token used for rewards
+    /// @param amountReceived Amount received by the contract
+    /// @param funder Address providing the funds
     event RewardTopUp(address indexed token, uint256 amountReceived, address indexed funder);
 }

@@ -6,7 +6,7 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {SP1VerifierGateway} from "@sp1-contracts/SP1VerifierGateway.sol";
 import {BridgeToken} from "../../src/test/BridgeToken.sol";
 import {Bridge} from "../../src/bridge/Bridge.sol";
-import {IBridgeUtils} from "../../src/bridge/BridgeTypes.sol";
+import {IBridgeTypes} from "../../src/bridge/BridgeTypes.sol";
 import {Upgrades, Options} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {JsonDeploymentHandler} from "../util/JsonDeploymentHandler.sol";
 import {StringUtil} from "../util/StringUtil.sol";
@@ -14,7 +14,7 @@ import {StringUtil} from "../util/StringUtil.sol";
 /// @title BridgeDeployScript
 /// @notice Deployment script for cross-chain bridge infrastructure
 /// @dev Deploys bridge tokens and bridge contracts using chain ID context
-contract BridgeDeployScript is Script, JsonDeploymentHandler, IBridgeUtils {
+contract BridgeDeployScript is Script, JsonDeploymentHandler, IBridgeTypes {
     using StringUtil for uint256;
 
     /// @notice Program verification key for SP1 verifier

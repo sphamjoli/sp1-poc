@@ -11,6 +11,10 @@ import {BridgeStorage} from "./BridgeStorage.sol";
 import {IBridge} from "./IBridge.sol";
 import {LocalExitTreeLib, SparseMerkleTree} from "../libs/LocalExitTreeLib.sol";
 import {IValidatorManager, IValidatorTypes} from "../validator/ValidatorManager.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuardUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+
 /// @title Bridge
 /// @author brianspha
 /// @notice Cross-chain bridge implementation with symmetric tree architecture
@@ -23,12 +27,17 @@ contract Bridge is
     Initializable,
     OwnableUpgradeable,
     UUPSUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
 {
     using LocalExitTreeLib for SparseMerkleTree.Bytes32SMT;
+    using SafeERC20 for IERC20;
 
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable constructor
     uint256 public immutable CHAIN_ID;
+
+    /// @notice Address of the validator manager contract
+    address public VALIDATOR_MANAGER;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -37,16 +46,21 @@ contract Bridge is
     }
 
     /// @inheritdoc IBridge
-    function initialize(address owner) external initializer {
+    function initialize(address owner) external override initializer {
         require(owner != address(0), IValidatorTypes.ZeroAddress());
-
         __Pausable_init();
         __Ownable_init(owner);
+        __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
     }
 
     /// @inheritdoc IBridge
-    function deposit(DepositParams calldata depositParams) external payable whenNotPaused {
+    function deposit(DepositParams calldata depositParams)
+        external
+        payable
+        whenNotPaused
+        nonReentrant
+    {
         require(depositParams.amount > 0, InvalidTransaction());
         require(
             depositParams.destinationChain != CHAIN_ID,
@@ -56,18 +70,8 @@ contract Bridge is
         if (depositParams.token == address(0)) {
             require(msg.value == depositParams.amount, InvalidTransaction());
         } else {
-            IERC20 tokenContract = IERC20(depositParams.token);
-            require(
-                tokenContract.allowance(msg.sender, address(this)) >= depositParams.amount,
-                BridgeNotApproved(depositParams.token, depositParams.amount)
-            );
-            require(
-                tokenContract.balanceOf(msg.sender) >= depositParams.amount,
-                InsufficientBalance(depositParams.token, depositParams.amount)
-            );
-            require(
-                tokenContract.transferFrom(msg.sender, address(this), depositParams.amount),
-                InsufficientBalance(depositParams.token, depositParams.amount)
+            IERC20(depositParams.token).safeTransferFrom(
+                msg.sender, address(this), depositParams.amount
             );
         }
 
@@ -78,7 +82,7 @@ contract Bridge is
             destinationChain: depositParams.destinationChain
         });
 
-        (bytes32 depositRoot, uint256 depositIndex) = __addToDepositTree(params);
+        (bytes32 depositRoot, uint256 depositIndex) = _addToDepositTree(params, CHAIN_ID);
 
         emit Deposit(
             msg.sender,
@@ -93,20 +97,30 @@ contract Bridge is
     }
 
     /// @inheritdoc IBridge
+    function updateValidatorManager(address validatorManager) external override onlyBridge {
+        require(validatorManager != address(0), IValidatorTypes.ZeroAddress());
+        emit ValidatorManagerUpdated(VALIDATOR_MANAGER, validatorManager);
+        VALIDATOR_MANAGER = validatorManager;
+    }
+
+    /// @inheritdoc IBridge
     function claim(ClaimParams calldata claimParams) external whenNotPaused {
         require(claimParams.amount > 0, InvalidTransaction());
-        require(claimParams.originChain != CHAIN_ID, SameChainTransfer(claimParams.originChain));
-
+        require(VALIDATOR_MANAGER != address(0), IValidatorTypes.ZeroAddress());
+        require(claimParams.sourceChain != CHAIN_ID, SameChainTransfer(claimParams.sourceChain));
         require(
-            isRootValid(claimParams.originChain, claimParams.sourceRoot),
-            InvalidSourceRoot(claimParams.originChain, claimParams.sourceRoot)
-        );
-        require(
-            !isDepositClaimed(claimParams.originChain, claimParams.depositIndex),
-            AlreadyClaimed(claimParams.originChain, claimParams.depositIndex)
+            !isDepositClaimed(claimParams.sourceChain, claimParams.depositIndex),
+            AlreadyClaimed(claimParams.sourceChain, claimParams.depositIndex)
         );
         require(msg.sender == claimParams.to, InvalidTransaction());
-
+        IValidatorTypes.RootParams memory params = IValidatorTypes.RootParams({
+            chainId: claimParams.sourceChain,
+            bridgeRoot: claimParams.sourceRoot
+        });
+        require(
+            IValidatorManager(VALIDATOR_MANAGER).isRootVerified(params),
+            InvalidRoot(claimParams.sourceRoot)
+        );
         DepositParams memory originalDeposit = DepositParams({
             amount: claimParams.amount,
             token: claimParams.token,
@@ -114,49 +128,44 @@ contract Bridge is
             destinationChain: CHAIN_ID
         });
 
-        bytes32 expectedLeaf = LocalExitTreeLib.computeExitLeaf(originalDeposit);
+        bytes32 expectedLeaf = LocalExitTreeLib.computeExitLeaf(
+            originalDeposit, claimParams.sourceChain, claimParams.depositIndex
+        );
         require(
             claimParams.proof.value == expectedLeaf, InvalidMerkleProof(claimParams.depositIndex)
         );
         require(claimParams.proof.existence, InvalidMerkleProof(claimParams.depositIndex));
         require(
-            !_verifyProofAgainstRoot(claimParams.proof, claimParams.sourceRoot),
+            _verifyProofAgainstRoot(claimParams.proof, claimParams.sourceRoot),
             InvalidMerkleProof(claimParams.depositIndex)
         );
 
-        markDepositClaimed(claimParams.originChain, claimParams.depositIndex);
+        markDepositClaimed(claimParams.sourceChain, claimParams.depositIndex);
 
         ClaimLeaf memory claimLeaf = ClaimLeaf({
             sourceDepositIndex: claimParams.depositIndex,
-            sourceChain: claimParams.originChain,
+            sourceChain: claimParams.sourceChain,
             sourceRoot: claimParams.sourceRoot,
             claimer: msg.sender,
             recipient: claimParams.to,
             amount: claimParams.amount,
             token: claimParams.token,
-            timestamp: block.timestamp
+            timestamp: block.timestamp,
+            destinationChain: CHAIN_ID
         });
 
-        (bytes32 claimRoot, uint256 claimIndex) = __addToClaimTree(claimLeaf);
+        (bytes32 claimRoot, uint256 claimIndex) = _addToClaimTree(claimLeaf);
 
         if (claimParams.token == address(0)) {
             require(
-                address(this).balance > claimParams.amount,
+                address(this).balance >= claimParams.amount,
                 InsufficientBalance(address(0), claimParams.amount)
             );
 
             (bool success,) = claimParams.to.call{value: claimParams.amount}("");
             require(success, ClaimFailed(address(0), claimParams.to, claimParams.amount));
         } else {
-            IERC20 tokenContract = IERC20(claimParams.token);
-            require(
-                tokenContract.balanceOf(address(this)) > claimParams.amount,
-                InsufficientBalance(claimParams.token, claimParams.amount)
-            );
-            require(
-                tokenContract.transfer(claimParams.to, claimParams.amount),
-                ClaimFailed(claimParams.token, claimParams.to, claimParams.amount)
-            );
+            IERC20(claimParams.token).safeTransfer(claimParams.to, claimParams.amount);
         }
 
         emit Claimed(
@@ -164,20 +173,12 @@ contract Bridge is
             claimParams.amount,
             claimParams.token,
             claimParams.to,
-            claimParams.originChain,
+            claimParams.sourceChain,
             claimParams.depositIndex,
             claimIndex,
             claimParams.sourceRoot,
             claimRoot
         );
-    }
-
-    /// @notice Update valid root for source chain
-    /// @param sourceChain Source chain ID
-    /// @param root Root hash to mark as valid
-    /// @dev Only owner can mark roots as valid (in production this would be automated)
-    function updateValidRoot(uint256 sourceChain, bytes32 root) external onlyOwner {
-        markRootValid(sourceChain, root);
     }
 
     /// @notice Verify proof against a root hash without requiring tree storage
@@ -192,23 +193,20 @@ contract Bridge is
         pure
         returns (bool valid)
     {
-        if (!proof.existence) {
-            return false;
-        }
+        if (!proof.existence) return false;
 
-        bytes32 computedRoot = proof.value;
-        uint256 index = uint256(proof.key);
+        bytes32 computed = proof.value;
+        uint256 idx = uint256(proof.key);
 
         for (uint256 i = 0; i < proof.siblings.length; i++) {
-            bytes32 sibling = proof.siblings[i];
-            if (((index >> i) & 1) == 1) {
-                computedRoot = keccak256(abi.encodePacked(sibling, computedRoot));
+            bytes32 sib = proof.siblings[i];
+            if (((idx >> i) & 1) == 1) {
+                computed = keccak256(abi.encodePacked(sib, computed));
             } else {
-                computedRoot = keccak256(abi.encodePacked(computedRoot, sibling));
+                computed = keccak256(abi.encodePacked(computed, sib));
             }
         }
-
-        return computedRoot == root;
+        return computed == root;
     }
 
     /// @inheritdoc IBridge
@@ -224,11 +222,7 @@ contract Bridge is
         require(token != address(0), IValidatorTypes.ZeroAddress());
         require(to != address(0), IValidatorTypes.ZeroAddress());
 
-        IERC20 tokenContract = IERC20(token);
-        require(
-            tokenContract.balanceOf(address(this)) >= amount, InsufficientBalance(token, amount)
-        );
-        require(tokenContract.transfer(to, amount), ClaimFailed(token, to, amount));
+        IERC20(token).safeTransfer(to, amount);
     }
 
     /// @inheritdoc IBridge

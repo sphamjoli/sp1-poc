@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 /// @title ArrayContains
 /// @author brianspha
 /// @notice Library for checking if arrays contain specific elements
+/// @dev This isnt meant to be used in prod its purely for experimental reasons
 /// @dev Provides contains functionality for common Solidity types
 library ArrayContainsLib {
     /// @notice Checks if a bytes array contains a specific element

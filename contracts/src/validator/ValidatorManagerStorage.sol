@@ -34,7 +34,7 @@ abstract contract ValidatorManagerStorage is IValidatorTypes {
 
     /// @notice Get Validator Manager storage key
     /// @return Storage position key
-    function __getStorageKey() internal pure returns (bytes32) {
+    function _getStorageKey() internal pure returns (bytes32) {
         return VM_STORAGE_SLOT;
     }
 }

@@ -263,10 +263,18 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         validatorManager = ValidatorManager(validatorManagerAddr);
         stakeManager = StakeManager(stakeManagerAddr);
         BridgeToken(_stakingToken).approve(stakeManagerAddr, type(uint256).max);
-        stakeManager.transferToken(_stakingToken, DEFAULT_REWARD_BALANCE);
         stakeManager.updateValidatorManager(validatorManagerAddr);
         validatorManager.updateStakingManager(stakeManagerAddr);
         configVersion = stakeManager.getStakeVersion(config);
+    }
+
+    function _topupRewards(uint256 forkId, uint256 amount, address rewardsToken) internal {
+        _prankOwnerOnChain(forkId);
+        if (forkId == FORKA_ID) {
+            stakeManagerA.transferToken(rewardsToken, amount);
+        } else {
+            stakeManagerB.transferToken(rewardsToken, amount);
+        }
     }
 
     /// @notice Stakes tokens as a specific user with their BLS credentials
@@ -345,6 +353,8 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
 
     /// @notice Distributes rewards to a validator based on their performance
     /// @dev Uses the validator's BLS data to create reward distribution parameters
+    /// @notice Calling distribute this way is OK since it assumes that the data
+    /// Will be from the ValidatorManagers perspective
     /// @param validator The address of the validator receiving rewards
     /// @param forkId The fork identifier where rewards are distributed
     /// @param epoch The current epoch to use

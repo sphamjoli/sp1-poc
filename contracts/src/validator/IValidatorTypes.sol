@@ -9,8 +9,6 @@ import {IStakeManagerTypes} from "../stake/IStakeManagerTypes.sol";
 /// @notice Type definitions and events for validator system
 /// @dev Defines core data structures and events for bridge validation system
 interface IValidatorTypes {
-    // ========== ERRORS ==========
-
     /// @notice Thrown when the new program key is the default bytes32 value
     error InvalidProgramKey(bytes32 key);
 
@@ -39,7 +37,6 @@ interface IValidatorTypes {
     error NotStakeManager(address caller);
 
     error UnableToRemoveValidator();
-    // ========== ENUMS ==========
 
     /// @notice Validator status enumeration
     /// @param Inactive Not staked or slashed below minimum
@@ -52,8 +49,6 @@ interface IValidatorTypes {
         Unstaking,
         Slashed
     }
-
-    // ========== STRUCTS ==========
 
     /// @notice Parameters for reward distribution
     /// @param totalReward Total reward amount to distribute
@@ -167,8 +162,6 @@ interface IValidatorTypes {
         EnumerableSet.AddressSet activeValidators;
         uint256[46] __gap;
     }
-
-    // ========== EVENTS ==========
 
     /// @notice Emitted when a validator stakes tokens
     /// @param validator Address of new validator

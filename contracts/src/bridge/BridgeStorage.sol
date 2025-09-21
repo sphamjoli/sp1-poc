@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {IBridgeUtils} from "./BridgeTypes.sol";
+import {IBridgeTypes} from "./BridgeTypes.sol";
 import "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
 import {LocalExitTreeLib, SparseMerkleTree} from "../libs/LocalExitTreeLib.sol";
 
 /// @title BridgeStorage
 /// @notice Abstract storage layer for cross-chain bridge contracts
 /// @dev Base contract providing diamond storage with symmetric tree architecture
-abstract contract BridgeStorage is IBridgeUtils {
+abstract contract BridgeStorage is IBridgeTypes {
     using SparseMerkleTree for SparseMerkleTree.Bytes32SMT;
     using SparseMerkleTree for SparseMerkleTree.Proof;
     using LocalExitTreeLib for SparseMerkleTree.Bytes32SMT;
@@ -55,29 +55,30 @@ abstract contract BridgeStorage is IBridgeUtils {
     /// @notice Add deposit to deposit tree
     /// @param params Deposit parameters
     /// @return newRoot Updated deposit tree root
-    /// @return depositIndex Index where deposit was stored
-    function __addToDepositTree(DepositParams memory params)
+    function _addToDepositTree(
+        DepositParams memory params,
+        uint256 sourceChainId
+    )
         internal
         onlyBridge
         returns (bytes32 newRoot, uint256 depositIndex)
     {
-        bytes32 exitLeaf = LocalExitTreeLib.computeExitLeaf(params);
-        depositIndex = DEPOSIT_COUNTER;
-        newRoot = depositTree.addDeposit(DEPOSIT_COUNTER++, exitLeaf);
+        depositIndex = DEPOSIT_COUNTER++;
+        bytes32 exitLeaf = LocalExitTreeLib.computeExitLeaf(params, sourceChainId, depositIndex);
+        newRoot = depositTree.addDeposit(depositIndex, exitLeaf);
     }
 
     /// @notice Add claim to claim tree
     /// @param claimLeaf Claim leaf data
     /// @return newRoot Updated claim tree root
-    /// @return claimIndex Index where claim was stored
-    function __addToClaimTree(ClaimLeaf memory claimLeaf)
+    function _addToClaimTree(ClaimLeaf memory claimLeaf)
         internal
         onlyBridge
         returns (bytes32 newRoot, uint256 claimIndex)
     {
-        bytes32 claimHash = keccak256(abi.encode(claimLeaf));
-        claimIndex = CLAIM_COUNTER;
-        newRoot = claimTree.addDeposit(CLAIM_COUNTER++, claimHash);
+        claimIndex = CLAIM_COUNTER++;
+        bytes32 claimHash = LocalExitTreeLib.computeExitLeaf(claimLeaf);
+        newRoot = claimTree.addDeposit(claimIndex, claimHash);
     }
 
     /// @notice Get latest deposit tree root
@@ -136,24 +137,6 @@ abstract contract BridgeStorage is IBridgeUtils {
         returns (bool exists, bytes32 value)
     {
         return claimTree.checkLeafExists(claimIndex);
-    }
-
-    /// @notice Mark source root as valid
-    /// @param sourceChain Source chain ID
-    /// @param root Root hash to validate
-    /// @dev Only callable by bridge contract
-    function markRootValid(uint256 sourceChain, bytes32 root) internal onlyBridge {
-        Storage storage $ = loadStorage();
-        $.validRoots[sourceChain][root] = true;
-    }
-
-    /// @notice Check if source root is valid
-    /// @param sourceChain Source chain ID
-    /// @param root Root hash to check
-    /// @return valid Whether the root is valid
-    function isRootValid(uint256 sourceChain, bytes32 root) internal view returns (bool valid) {
-        Storage storage $ = loadStorage();
-        return $.validRoots[sourceChain][root];
     }
 
     /// @notice Check if deposit has been claimed

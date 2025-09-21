@@ -16,7 +16,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title Validator Manager
 /// @notice Manages validator lifecycle and bridge state attestations
-/// @dev Handles validator registration, attestation submission, and reward distribution
+/// @dev Handles validator registration, BLS attestations, pre-confirmations, and reward distribution
 contract ValidatorManager is
     IValidatorManager,
     Initializable,
@@ -35,6 +35,7 @@ contract ValidatorManager is
     }
 
     /// @notice Chain ID where this contract is deployed
+    /// @dev Captured immutably at construction
     uint256 public immutable CHAIN_ID;
 
     /// @notice Contract name identifier
@@ -49,18 +50,19 @@ contract ValidatorManager is
     /// @notice SP1 verifier contract address
     address public SP1_VERIFIER;
 
-    /// @notice Domain separator for BLS proof of possession in attestations
+    /// @notice Domain separator used by BLS hash-to-curve for attestations
     bytes public POP_ATTEST_DOMAIN;
 
-    /// @notice SP1 program verification key for bridge proofs
+    /// @notice SP1 program verification key for bridge proof verification
     bytes32 public PROGRAM_KEY;
 
-    /// @notice Current epoch number
+    /// @notice Current epoch index used for reward periods
     uint256 public EPOCH;
 
     /// @notice Duration of each epoch in seconds
     uint256 public EPOCH_DURATION;
 
+    /// @notice Timestamp of epoch zero; basis for epoch calculations
     uint256 public EPOCH_ZERO_TS;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -103,9 +105,7 @@ contract ValidatorManager is
         require(msg.sender == attestation.validator, NotAllowed());
         require($.validators[msg.sender].status == ValidatorStatus.Active, ValidatorNotRegistered());
 
-        bytes32 attestationKey = keccak256(
-            abi.encode(attestation.chainId, attestation.bridgeRoot, attestation.blockNumber)
-        );
+        bytes32 attestationKey = keccak256(abi.encode(attestation.chainId, attestation.bridgeRoot));
         require(!$.attestations[msg.sender][attestationKey], AlreadyAttested());
 
         uint256[4] memory blsPublicKey = $.validators[msg.sender].blsPublicKey;
@@ -119,11 +119,13 @@ contract ValidatorManager is
         _updatePreConfirmation($, attestationKey, 1);
 
         emit AttestationSubmitted(
-            msg.sender, CHAIN_ID, attestation.bridgeRoot, attestation.blockNumber
+            msg.sender, attestation.chainId, attestation.bridgeRoot, attestation.blockNumber
         );
     }
 
     /// @inheritdoc IValidatorManager
+    /// @dev This function needs some more work
+    /// @dev solbls doesnt support aggregated bls keys
     function submitAggregatedAttestation(AggregatedBridgeAttestation calldata attestation)
         external
         override
@@ -133,9 +135,7 @@ contract ValidatorManager is
 
         require(attestation.participants.length > 0, NoParticipants());
 
-        bytes32 attestationKey = keccak256(
-            abi.encode(attestation.chainId, attestation.bridgeRoot, attestation.blockNumber)
-        );
+        bytes32 attestationKey = keccak256(abi.encode(attestation.chainId, attestation.bridgeRoot));
 
         for (uint256 i = 0; i < attestation.participants.length; i++) {
             address participant = attestation.participants[i];
@@ -158,7 +158,7 @@ contract ValidatorManager is
         _updatePreConfirmation($, attestationKey, attestation.participants.length);
 
         emit AttestationSubmitted(
-            msg.sender, CHAIN_ID, attestation.bridgeRoot, attestation.blockNumber
+            msg.sender, attestation.chainId, attestation.bridgeRoot, attestation.blockNumber
         );
     }
 
@@ -186,6 +186,12 @@ contract ValidatorManager is
         VMStorage storage $ = _loadStorage();
         ValidatorInfo storage info = $.validators[validator];
         info.status = status;
+
+        if (status == ValidatorStatus.Active) {
+            $.activeValidators.add(validator);
+        } else if (status == ValidatorStatus.Unstaking || status == ValidatorStatus.Inactive) {
+            $.activeValidators.remove(validator);
+        }
     }
 
     /// @inheritdoc IValidatorManager
@@ -320,6 +326,7 @@ contract ValidatorManager is
 
     /// @inheritdoc IValidatorManager
     function getEpochsPerYear() external view override returns (uint256 epochs) {
+        // 365.25 days
         return 31557600 / EPOCH_DURATION;
     }
 
@@ -344,10 +351,11 @@ contract ValidatorManager is
         IStakeManager(STAKING_MANAGER).distributeRewards(params);
     }
 
-    /// @notice Update pre-confirmation status for an attestation
+    /// @notice Update pre-confirmation status for an attestation key
+    /// @dev Uses a 67% rounded-up threshold over the active validator set
     /// @param $ Storage reference
-    /// @param attestationKey Unique key for the attestation
-    /// @param additionalCount Number of new confirmations to add
+    /// @param attestationKey Unique key (chainId, bridgeRoot)
+    /// @param additionalCount Newly added confirmations
     function _updatePreConfirmation(
         VMStorage storage $,
         bytes32 attestationKey,
@@ -358,26 +366,29 @@ contract ValidatorManager is
         PreConfirmation storage pc = $.preConfirmations[attestationKey];
         pc.count += additionalCount;
 
-        // Here we need a 67% threshold with rounding up similar to calling math.ceil()
+        // 67% threshold with rounding up
         uint256 threshold = ($.activeValidators.length() * 67 + 99) / 100;
         if (!pc.confirmed && pc.count >= threshold) {
             pc.confirmed = true;
         }
     }
 
-    /// @notice Increment epoch and emit event
+    /// @notice Increment the epoch counter and emit event
     function _updateEpoch() internal {
         emit NewEpoch(EPOCH, ++EPOCH);
     }
 
     /// @inheritdoc IValidatorManager
+    /// @notice Compute how many epochs have elapsed since a timestamp
+    /// @param timestamp Reference timestamp
+    /// @return epochs Elapsed epochs since the timestamp
     function epochsElapsedSince(uint256 timestamp) public view override returns (uint256 epochs) {
         if (block.timestamp <= timestamp || EPOCH_DURATION == 0) return 0;
         epochs = Math.saturatingSub(block.timestamp, timestamp) / EPOCH_DURATION;
     }
 
-    /// @notice Authorize contract upgrades
-    /// @dev Only owner can authorize upgrades per UUPS pattern
-    /// @param newImplementation Address of new implementation contract
+    /// @notice Authorize contract upgrades (UUPS)
+    /// @dev Only owner can authorize upgrades
+    /// @param newImplementation New implementation address
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }

@@ -3,34 +3,40 @@ pragma solidity ^0.8.25;
 
 import {SparseMerkleTree} from "../libs/LocalExitTreeLib.sol";
 
-/// @title IBridgeUtils
+/// @title BridgeTypes
 /// @author brianspha
-/// @notice Interface providing common events and errors for cross-chain bridge system
-/// @dev Base interface inherited by all bridge contracts for consistent event emission and error handling
-interface IBridgeUtils {
-    /// @notice Bridge storage structure
-    /// @dev Append-only structure for safe upgrades
+/// @notice Common types, events, and errors for the bridge
+/// @dev Shared base interface for consistent ABI and logging
+interface IBridgeTypes {
+    /// @notice Bridge storage layout
+    /// @dev Append-only fields to preserve upgrade safety
     struct Storage {
-        /// @dev Sparse merkle tree for tracking deposits
+        /// @notice Sparse Merkle tree for deposits
+        /// @dev Tracks deposit leaves on the source chain
         SparseMerkleTree.Bytes32SMT depositTree;
-        /// @dev Sparse merkle tree for tracking claims
+        /// @notice Sparse Merkle tree for claims
+        /// @dev Tracks claim/nullifier leaves on the destination chain
         SparseMerkleTree.Bytes32SMT claimTree;
-        /// @dev Counter for deposit indices
+        /// @notice Next deposit index
+        /// @dev Monotonically increasing counter
         uint256 depositCounter;
-        /// @dev Counter for claim indices
+        /// @notice Next claim index
+        /// @dev Monotonically increasing counter
         uint256 claimCounter;
-        /// @dev Maps source chain ID => root hash => validity status
+        /// @notice Root acceptance map per source chain
+        /// @dev validRoots[chainId][root] == true if verified/accepted
         mapping(uint256 => mapping(bytes32 => bool)) validRoots;
-        /// @dev Maps (sourceChain, depositIndex) => claimed status
+        /// @notice Claimed deposits bitmap
+        /// @dev Keyed by keccak256(abi.encode(sourceChain, depositIndex))
         mapping(bytes32 => bool) claimed;
-        /// @dev Reserved slots for future upgrades
+        /// @notice Reserved storage gap for upgrades
         uint256[50] __gap;
     }
 
-    /// @notice Parameters for deposit operations
-    /// @param amount Amount of assets to deposit
-    /// @param token Token contract address (zero address for native ETH)
-    /// @param to Recipient address on destination chain
+    /// @notice Deposit parameters
+    /// @param amount Amount to deposit
+    /// @param token ERC20 token address (zero for native ETH)
+    /// @param to Recipient on the destination chain
     /// @param destinationChain Chain ID where assets will be claimed
     struct DepositParams {
         uint256 amount;
@@ -39,15 +45,16 @@ interface IBridgeUtils {
         uint256 destinationChain;
     }
 
-    /// @notice Structure representing a claim leaf in the claim tree
-    /// @param sourceDepositIndex Index of the original deposit in source chain
-    /// @param sourceChain Chain ID where the original deposit was made
-    /// @param sourceRoot Source chain tree root used for verification
-    /// @param claimer Address that executed the claim transaction
-    /// @param recipient Address that received the claimed assets
-    /// @param amount Amount of assets claimed
-    /// @param token Token contract address being claimed
-    /// @param timestamp Block timestamp when claim was processed
+    /// @notice Claim leaf data recorded in the claim tree
+    /// @param sourceDepositIndex Deposit index on the source chain
+    /// @param sourceChain Source chain ID
+    /// @param sourceRoot Source deposit tree root used for verification
+    /// @param claimer Caller that executed the claim
+    /// @param recipient Recipient of the assets
+    /// @param amount Amount claimed
+    /// @param token Token being claimed
+    /// @param timestamp Block timestamp when processed
+    /// @param destinationChain Destination chain ID (current chain)
     struct ClaimLeaf {
         uint256 sourceDepositIndex;
         uint256 sourceChain;
@@ -57,19 +64,20 @@ interface IBridgeUtils {
         uint256 amount;
         address token;
         uint256 timestamp;
+        uint256 destinationChain;
     }
 
-    /// @notice Parameters for claim operations
-    /// @param depositIndex Index of the deposit in source chain tree
-    /// @param originChain Source chain ID where deposit was made
-    /// @param token Token contract address being claimed
-    /// @param to Recipient address for the claimed assets
-    /// @param amount Amount being claimed
-    /// @param sourceRoot Source chain tree root to verify against
-    /// @param proof Merkle inclusion proof from source chain tree
+    /// @notice Claim parameters
+    /// @param depositIndex Deposit index on the source chain
+    /// @param sourceChain Source chain ID
+    /// @param token Token to claim
+    /// @param to Recipient address on this chain
+    /// @param amount Amount to claim
+    /// @param sourceRoot Source deposit tree root to verify against
+    /// @param proof Merkle inclusion proof from the source deposit tree
     struct ClaimParams {
         uint256 depositIndex;
-        uint32 originChain;
+        uint32 sourceChain;
         address token;
         address to;
         uint256 amount;
@@ -77,15 +85,15 @@ interface IBridgeUtils {
         SparseMerkleTree.Proof proof;
     }
 
-    /// @notice Emitted when a user deposits assets to be bridged to another chain
-    /// @param who The address of the user making the deposit
-    /// @param amount The amount of assets deposited
-    /// @param token The token contract address (zero address for native ETH)
-    /// @param to The destination address on the target chain
-    /// @param sourceChain The chain ID where the deposit was made
-    /// @param destinationChain The chain ID where assets will be claimed
-    /// @param depositIndex The index of this deposit in the source chain tree
-    /// @param depositRoot The updated deposit tree root after this deposit
+    /// @notice Emitted on deposit on the source chain
+    /// @param who Depositor address
+    /// @param amount Amount deposited
+    /// @param token Token address (zero for native ETH)
+    /// @param to Destination recipient
+    /// @param sourceChain Source chain ID
+    /// @param destinationChain Destination chain ID
+    /// @param depositIndex Assigned deposit index
+    /// @param depositRoot New deposit tree root after insertion
     event Deposit(
         address indexed who,
         uint256 amount,
@@ -97,16 +105,16 @@ interface IBridgeUtils {
         bytes32 indexed depositRoot
     );
 
-    /// @notice Emitted when a user successfully claims bridged assets on the destination chain
-    /// @param claimer The address that executed the claim transaction
-    /// @param amount The amount of assets claimed
-    /// @param token The token contract address (zero address for native ETH)
-    /// @param recipient The address that received the claimed assets
-    /// @param sourceChain The chain ID where the original deposit occurred
-    /// @param depositIndex The index of the original deposit in source chain
-    /// @param claimIndex The index of this claim in the destination chain claim tree
-    /// @param sourceRoot The source chain tree root used for verification
-    /// @param claimRoot The updated claim tree root after this claim
+    /// @notice Emitted on a successful claim on the destination chain
+    /// @param claimer Address that executed the claim
+    /// @param amount Amount claimed
+    /// @param token Token address (zero for native ETH)
+    /// @param recipient Recipient of the assets
+    /// @param sourceChain Source chain ID for the original deposit
+    /// @param depositIndex Source deposit index
+    /// @param claimIndex Assigned claim index on this chain
+    /// @param sourceRoot Source deposit tree root used for verification
+    /// @param claimRoot New claim tree root after insertion
     event Claimed(
         address indexed claimer,
         uint256 indexed amount,
@@ -119,54 +127,66 @@ interface IBridgeUtils {
         bytes32 claimRoot
     );
 
-    /// @notice Invalid transaction parameters provided
+    /// @notice Emitted when the validator manager address is updated
+    /// @param currentManager Previous validator manager
+    /// @param newManager New validator manager
+    event ValidatorManagerUpdated(address indexed currentManager, address indexed newManager);
+
+    /// @notice Invalid transaction parameters
     error InvalidTransaction();
 
-    /// @notice Bridge contract lacks approval to spend required token amount
-    /// @param token ERC20 token contract address that lacks approval
-    /// @param amount Amount that was attempted to be transferred
+    /// @notice Bridge lacks approval to spend tokens
+    /// @param token ERC20 token address
+    /// @param amount Required amount
     error BridgeNotApproved(address token, uint256 amount);
 
-    /// @notice Insufficient funds available for the requested operation
-    /// @param token Token contract address (zero address for ETH)
-    /// @param amount Amount that was requested but unavailable
+    /// @notice Insufficient contract or user balance
+    /// @param token Token address (zero for ETH)
+    /// @param amount Missing amount
     error InsufficientBalance(address token, uint256 amount);
 
-    /// @notice Native ETH rescue operation failed
+    /// @notice ETH rescue transfer failed
     error FailedToRescueEther();
 
-    /// @notice Asset claim operation failed to complete successfully
-    /// @param token Token contract address that failed to transfer (zero address for ETH)
-    /// @param to Intended recipient address
-    /// @param amount Amount that failed to transfer
+    /// @notice Invalid chain ID
+    error InvalidChainId();
+
+    /// @notice Root is not verified/accepted for the given bridge
+    /// @param root Sparse Merkle tree root
+    error InvalidRoot(bytes32 root);
+
+    /// @notice Claim transfer failed
+    /// @param token Token address (zero for ETH)
+    /// @param to Intended recipient
+    /// @param amount Amount attempted
     error ClaimFailed(address token, address to, uint256 amount);
 
-    /// @notice Required bytes32 parameter is zero
+    /// @notice bytes32 argument is zero
     error ZeroBytes32();
 
-    /// @notice Deposit has already been claimed
+    /// @notice Deposit already claimed
     /// @param sourceChain Source chain ID
-    /// @param depositIndex Index of the deposit that was already claimed
+    /// @param depositIndex Deposit index
     error AlreadyClaimed(uint256 sourceChain, uint256 depositIndex);
 
-    /// @notice Invalid merkle proof provided for claim verification
-    /// @param depositIndex Index of the deposit being claimed
+    /// @notice Invalid Merkle proof
+    /// @param depositIndex Deposit index being claimed
     error InvalidMerkleProof(uint256 depositIndex);
 
-    /// @notice Source chain root is not valid or not verified
-    /// @param sourceChain Chain ID of the source chain
-    /// @param root Tree root that is not valid
+    /// @notice Source root is not valid for the given chain
+    /// @param sourceChain Source chain ID
+    /// @param root Root that failed validation
     error InvalidSourceRoot(uint256 sourceChain, bytes32 root);
 
-    /// @notice Attempting to bridge to the same chain as source
-    /// @param chainId Invalid destination chain ID
+    /// @notice Attempted to bridge to the same chain
+    /// @param chainId Destination chain ID
     error SameChainTransfer(uint256 chainId);
 
-    /// @notice Thrown when caller is not the bridge contract
-    /// @dev Used to protect the bridge storage
+    /// @notice Caller is not the bridge
+    /// @dev Used to protect internal storage modifiers
     error NotBridge();
 
     /// @notice Tree operation failed
-    /// @param operation The operation that failed (add, update, remove)
+    /// @param operation Operation name ("add", "update", "remove")
     error TreeOperationFailed(string operation);
 }

@@ -33,6 +33,7 @@ bincode = { version = "1.3.3", default-features = false }
 dotenv = { version = "0.15.0", default-features = false }
 thiserror = { version = "2.0.12", default-features = false }
 futures = { version = "0.3.31", default-features = false }
+recall_merkle_tree_rs = { version = "0.1.0", default-features = false }
 
 # Database dependencies
 mongodb = { version = "3.2.4", features = [

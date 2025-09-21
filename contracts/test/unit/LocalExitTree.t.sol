@@ -22,7 +22,7 @@ contract LocalExitTreeLibTest is BridgeBaseTest {
             destinationChain: CHAINB_ID,
             token: address(TOKEN_CHAINA)
         });
-        bytes32 exitLeaf = LocalExitTreeLib.computeExitLeaf(params);
+        bytes32 exitLeaf = LocalExitTreeLib.computeExitLeaf(params, block.chainid, depositIndex);
         treeA.addDeposit(depositIndex, exitLeaf);
         SparseMerkleTree.Proof memory proof = treeA.getProof(depositIndex);
         bool valid = LocalExitTreeLib.verifyProof(treeA, proof);
@@ -39,7 +39,7 @@ contract LocalExitTreeLibTest is BridgeBaseTest {
             destinationChain: CHAINB_ID,
             token: address(TOKEN_CHAINA)
         });
-        bytes32 exitLeaf = LocalExitTreeLib.computeExitLeaf(params);
+        bytes32 exitLeaf = LocalExitTreeLib.computeExitLeaf(params, block.chainid, depositIndex);
         treeA.addDeposit(depositIndex, exitLeaf);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -62,7 +62,7 @@ contract LocalExitTreeLibTest is BridgeBaseTest {
                 destinationChain: CHAINB_ID,
                 token: address(TOKEN_CHAINA)
             });
-            exitLeaves[i] = LocalExitTreeLib.computeExitLeaf(params);
+            exitLeaves[i] = LocalExitTreeLib.computeExitLeaf(params, block.chainid, startIndex + 1);
         }
 
         treeA.batchAddDeposits(startIndex, exitLeaves);

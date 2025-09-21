@@ -2,7 +2,7 @@
 pragma solidity ^0.8.30;
 
 import "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
-import {IBridgeUtils} from "../bridge/BridgeTypes.sol";
+import {IBridgeTypes} from "../bridge/BridgeTypes.sol";
 
 /// @title LocalExitTreeLib
 /// @author brianspha
@@ -94,22 +94,60 @@ library LocalExitTreeLib {
     }
 
     /// @notice Compute exit leaf hash using DepositParams
-    /// @dev see {IBridgeUtils.DepositParams}
+    /// @param params see {IBridgeTypes.DepositParams}
+    /// @param sourceChain The chain id for the source chain
+    /// @param depositIndex The index of the deposit on the source chain emitted by the Deposit event
     /// @return exitLeaf The computed exit leaf
-    function computeExitLeaf(IBridgeUtils.DepositParams memory params)
+    function computeExitLeaf(
+        IBridgeTypes.DepositParams memory params,
+        uint256 sourceChain,
+        uint256 depositIndex
+    )
         internal
         pure
         returns (bytes32 exitLeaf)
     {
-        return
-            keccak256(abi.encode(params.amount, params.token, params.to, params.destinationChain));
+        return keccak256(
+            abi.encode(
+                params.amount,
+                params.token,
+                params.to,
+                params.destinationChain,
+                sourceChain,
+                depositIndex
+            )
+        );
     }
 
+    /// @notice Compute exit leaf hash using ClaimLeaf
+    /// @param params see {IBridgeTypes.ClaimLeaf}
+    /// @return exitLeaf The computed exit leaf
+    function computeExitLeaf(IBridgeTypes.ClaimLeaf memory params)
+        internal
+        pure
+        returns (bytes32 exitLeaf)
+    {
+        return keccak256(
+            abi.encode(
+                params.sourceDepositIndex,
+                params.sourceChain,
+                params.sourceRoot,
+                params.claimer,
+                params.recipient,
+                params.recipient,
+                params.amount,
+                params.token,
+                params.timestamp,
+                params.destinationChain
+            )
+        );
+    }
     /// @notice Check if a leaf exists in the tree
     /// @param tree The SMT storage reference
     /// @param depositIndex The deposit index to check
     /// @return exists Whether the leaf exists
     /// @return value The leaf value if it exists
+
     function checkLeafExists(
         SparseMerkleTree.Bytes32SMT storage tree,
         uint256 depositIndex

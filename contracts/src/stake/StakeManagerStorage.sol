@@ -35,7 +35,7 @@ abstract contract StakeManagerStorage is IStakeManagerTypes {
 
     /// @notice Get StakeManager storage key
     /// @return Storage position key
-    function __getStorageKey() internal pure returns (bytes32) {
+    function _getStorageKey() internal pure returns (bytes32) {
         return SM_STORAGE_SLOT;
     }
 }

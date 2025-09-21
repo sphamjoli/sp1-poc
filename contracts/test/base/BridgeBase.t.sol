@@ -6,15 +6,16 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {SP1VerifierGateway} from "@sp1-contracts/SP1VerifierGateway.sol";
 import {BridgeToken} from "../../src/test/BridgeToken.sol";
 import {Bridge} from "../../src/bridge/Bridge.sol";
-import {IBridgeUtils} from "../../src/bridge/BridgeTypes.sol";
+import {IBridgeTypes} from "../../src/bridge/BridgeTypes.sol";
 import {Upgrades, Options} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {LocalExitTreeLib, SparseMerkleTree} from "../../src/libs/LocalExitTreeLib.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @title BridgeBaseTest
 /// @notice Base test harness that spins up two forked chains with Bridge and ERC20 test tokens,
 /// @notice sets deterministic users/balances, and provides helpers for labeling and owner pranks.
 /// @dev Uses Foundry cheatcodes and OpenZeppelin Foundry Upgrades to deploy UUPS proxies.
-abstract contract BridgeBaseTest is Test, IBridgeUtils {
+abstract contract BridgeBaseTest is Test, IBridgeTypes {
     using LocalExitTreeLib for SparseMerkleTree.Bytes32SMT;
     using SparseMerkleTree for SparseMerkleTree.Bytes32SMT;
 

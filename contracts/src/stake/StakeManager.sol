@@ -15,6 +15,7 @@ import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {BLS} from "solbls/BLS.sol";
 import {StakeManagerStorage} from "./StakeManagerStorage.sol";
@@ -37,6 +38,7 @@ contract StakeManager is
 {
     using BLS for *;
     using ArrayContainsLib for address[];
+    using SafeERC20 for IERC20;
 
     /// @notice Restricts access to validator manager only
     modifier onlyValidatorManager() {
@@ -158,10 +160,7 @@ contract StakeManager is
         }
 
         IERC20 token = IERC20(ACTIVE_STAKING_CONFIG.stakingToken);
-        // I dont really like doing the below because the transaction will fail regardless but for sanity check
-        // We can keep it
-        require(token.allowance(msg.sender, address(this)) >= params.stakeAmount, NotApproved());
-        require(token.transferFrom(msg.sender, address(this), params.stakeAmount), TransferFailed());
+        token.safeTransferFrom(msg.sender, address(this), params.stakeAmount);
 
         // Increase principal by the newly staked amount
         $.principal[ACTIVE_STAKING_CONFIG.stakingToken] += params.stakeAmount;
@@ -200,9 +199,10 @@ contract StakeManager is
         require(token != address(0), ZeroAddress());
         require(amount > 0, NotAllowed());
 
-        uint256 balBefore = IERC20(token).balanceOf(address(this));
-        require(IERC20(token).transferFrom(msg.sender, address(this), amount), TransferFailed());
-        uint256 balAfter = IERC20(token).balanceOf(address(this));
+        IERC20 erc = IERC20(token);
+        uint256 balBefore = erc.balanceOf(address(this));
+        erc.safeTransferFrom(msg.sender, address(this), amount);
+        uint256 balAfter = erc.balanceOf(address(this));
 
         uint256 received = balAfter - balBefore;
         require(received > 0, NotReservesRecieved());
@@ -218,14 +218,10 @@ contract StakeManager is
     function sweepExcess(address token, uint256 amount) external onlyOwner nonReentrant {
         SMStorage storage $ = _loadStorage();
 
-        uint256 balance = IERC20(token).balanceOf(address(this));
-        uint256 required = $.principal[token] + $.rewardReserves[token];
-        require(balance > required, NoAccessReserves());
+        uint256 required = $.rewardReserves[token];
+        require(required > amount, NoAccessReserves());
 
-        uint256 available = balance - required;
-        uint256 toSend = amount < available ? amount : available;
-
-        require(IERC20(token).transfer(msg.sender, toSend), TransferFailed());
+        IERC20(token).safeTransfer(msg.sender, amount);
     }
 
     /// @inheritdoc ERC721Upgradeable
@@ -286,32 +282,36 @@ contract StakeManager is
     function beginUnstaking(UnstakingParams memory params) external override {
         SMStorage storage $ = _loadStorage();
         ValidatorBalance storage validator = $.balances[msg.sender];
-        StakeManagerConfig memory cfg = $.stakingManagerVersions[validator.stakeVersion];
+        StakeManagerConfig memory config = $.stakingManagerVersions[validator.stakeVersion];
         IValidatorTypes.ValidatorInfo memory info =
             IValidatorManager(VALIDATOR_MANAGER).getValidator(msg.sender);
-        require(cfg.minStakeAmount > 0, InvalidStakingConfig());
-        require(validator.stakeAmount > 0, ValidatorNotFound());
 
-        require(validator.stakeExitTimestamp == 0, NotAllowed());
+        require(config.minStakeAmount > 0, InvalidStakingConfig());
 
-        require(params.stakeAmount > 0, MinStakeAmountRequired());
-        require(params.stakeAmount <= validator.stakeAmount, AmountExceedsStake());
-        require(params.stakeAmount >= cfg.minWithdrawAmount, MinStakeAmountRequired());
         if (info.status == IValidatorTypes.ValidatorStatus.Inactive) {
-            // This is the case where validators want to exist after being
-            // Jailed for being slashed below the threshold and donot want
-            // To topup
-            validator.unstakeAmount = params.stakeAmount;
+            // This is the case where validators want to exit after being
+            // Jailed for being slashed below the threshold and do not want
+            // To topup we also reset their rewards to 0 since everything
+            // Is being withdrawn
+            validator.unstakeAmount = validator.stakeAmount + validator.balance;
             validator.stakeAmount = 0;
+            validator.balance = 0;
         } else {
+            require(validator.unstakeAmount == 0, NotAllowed());
+            require(validator.stakeAmount > 0, ValidatorNotFound());
+            require(validator.stakeExitTimestamp == 0, NotAllowed());
+            require(params.stakeAmount > 0, MinStakeAmountRequired());
+            require(params.stakeAmount <= validator.stakeAmount, AmountExceedsStake());
+            require(params.stakeAmount > config.minWithdrawAmount, MinStakeAmountRequired());
             uint256 remaining = validator.stakeAmount - params.stakeAmount;
             bool fullExit = remaining == 0;
+
             if (!fullExit) {
-                require(remaining >= cfg.minStakeAmount, BelowMinimumStake());
+                require(remaining >= config.minStakeAmount, BelowMinimumStake());
             }
 
             validator.unstakeAmount = params.stakeAmount;
-            validator.stakeExitTimestamp = block.timestamp + cfg.minUnstakeDelay;
+            validator.stakeExitTimestamp = block.timestamp + config.minUnstakeDelay;
         }
 
         IValidatorManager(VALIDATOR_MANAGER).updateValidatorStatus(
@@ -326,12 +326,13 @@ contract StakeManager is
         );
     }
 
+    event Here(uint256 indexed amount, uint256 indexed principal);
+
     /// @inheritdoc IStakeManager
     function completeUnstaking() external override nonReentrant {
         SMStorage storage $ = _loadStorage();
         ValidatorBalance storage validator = $.balances[msg.sender];
         StakeManagerConfig memory config = $.stakingManagerVersions[validator.stakeVersion];
-        require(validator.stakeAmount > 0, ValidatorNotFound());
         require(validator.stakeExitTimestamp > 0, NotAllowed());
         require(block.timestamp >= validator.stakeExitTimestamp, NotAllowed());
         require(validator.unstakeAmount > 0, NotAllowed());
@@ -340,6 +341,7 @@ contract StakeManager is
         uint256 rewardAmount = validator.balance;
         bool partialExit = _processUnstaking(validator);
         bytes32 stakeVersion = validator.stakeVersion;
+        emit Here(totalAmount, $.principal[config.stakingToken]);
         $.principal[config.stakingToken] -= totalAmount;
 
         if (!partialExit) {
@@ -351,7 +353,7 @@ contract StakeManager is
         }
 
         IERC20 token = IERC20(config.stakingToken);
-        require(token.transfer(msg.sender, totalAmount), TransferFailed());
+        token.safeTransfer(msg.sender, totalAmount);
 
         emit ValidatorExit(msg.sender, stakeVersion, rewardAmount, partialExit);
     }
@@ -371,8 +373,9 @@ contract StakeManager is
         SMStorage storage $ = _loadStorage();
         ValidatorBalance storage validator = $.balances[params.validator];
         StakeManagerConfig memory config = $.stakingManagerVersions[validator.stakeVersion];
-
+        require(config.minStakeAmount > 0, InvalidStakeVersion());
         require(validator.stakeAmount > 0, ValidatorNotFound());
+
         uint256 balance = validator.stakeAmount + validator.balance;
         require(balance >= params.slashAmount, InsufficientStakeToSlash());
 
@@ -432,15 +435,16 @@ contract StakeManager is
     function claimRewards() external override nonReentrant {
         SMStorage storage $ = _loadStorage();
         ValidatorBalance storage validator = $.balances[msg.sender];
-
+        address stakingToken = $.stakingManagerVersions[validator.stakeVersion].stakingToken;
         require(validator.balance > 0, NoRewardsToClaim());
         uint256 amount = validator.balance;
+        require($.rewardReserves[stakingToken] >= amount, NoRewards());
         validator.balance = 0;
-        address stakingToken = $.stakingManagerVersions[validator.stakeVersion].stakingToken;
 
         IERC20 token = IERC20(stakingToken);
-        require(token.transfer(msg.sender, amount), TransferFailed());
-
+        token.safeTransfer(msg.sender, amount);
+        $.rewardReserves[stakingToken] =
+            amount >= $.rewardReserves[stakingToken] ? 0 : $.rewardReserves[stakingToken] - amount;
         emit ValidatorRewardsClaimed(msg.sender, amount, block.timestamp);
     }
 
@@ -523,7 +527,16 @@ contract StakeManager is
         } else {
             uint256 remainingAmount = validator.unstakeAmount - validator.balance;
             validator.balance = 0;
-            validator.stakeAmount -= remainingAmount;
+            // Theres a scenario where the validator has been jailed
+            // But have no interest on topping up since they were slahed
+            // Below the min stake amount as such they want to withdraw everything
+            // Including the rewards they have accumalated we could use their rewards
+            // To top up but thats up to them we care for allowing them to withdraw everything
+            // So the below statement of substracting from stakeAmount the remaining amount needs
+            // To ensure that we cater for if the stakeAmount has been reset to 0 in the beginUnstake
+            // Step since the validators rewards have also been also reset to 0
+            validator.stakeAmount =
+                validator.stakeAmount > 0 ? validator.stakeAmount - remainingAmount : 0;
             partialExit = validator.stakeAmount > 0;
         }
 
@@ -662,7 +675,6 @@ contract StakeManager is
                 : Math.mulDiv(correctAttestations, PERFORMANCE_SCALE, vi.attestationCount);
 
             ValidatorBalance storage balance = $.balances[vi.wallet];
-
             if (balance.lastRewardEpoch >= currentEpoch) {
                 eligible[i] = false;
                 continue;
