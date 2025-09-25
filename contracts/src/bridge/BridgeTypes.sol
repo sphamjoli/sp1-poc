@@ -115,6 +115,7 @@ interface IBridgeTypes {
     /// @param claimIndex Assigned claim index on this chain
     /// @param sourceRoot Source deposit tree root used for verification
     /// @param claimRoot New claim tree root after insertion
+    /// @param destinationChain The chain id which processed the claim
     event Claimed(
         address indexed claimer,
         uint256 indexed amount,
@@ -124,7 +125,8 @@ interface IBridgeTypes {
         uint256 depositIndex,
         uint256 claimIndex,
         bytes32 sourceRoot,
-        bytes32 claimRoot
+        bytes32 claimRoot,
+        uint256 destinationChain
     );
 
     /// @notice Emitted when the validator manager address is updated

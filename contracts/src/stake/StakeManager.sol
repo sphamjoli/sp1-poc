@@ -16,7 +16,6 @@ import {PausableUpgradeable} from
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import {BLS} from "solbls/BLS.sol";
 import {StakeManagerStorage} from "./StakeManagerStorage.sol";
 import {ArrayContainsLib} from "../libs/ArrayContainsLib.sol";

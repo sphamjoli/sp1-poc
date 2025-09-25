@@ -6,8 +6,7 @@ import {ISP1Verifier} from "@sp1-contracts/ISP1Verifier.sol";
 import {IValidatorManager, IValidatorTypes} from "./IValidatorManager.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {PausableUpgradeable} from
-    "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ValidatorManagerStorage} from "./ValidatorManagerStorage.sol";
 import {BLS} from "solbls/BLS.sol";
@@ -29,8 +28,11 @@ contract ValidatorManager is
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @notice Restricts access to stake manager only
-    modifier onlyStakeManager() {
-        require(msg.sender == STAKING_MANAGER, NotStakeManager(msg.sender));
+    modifier onlyAdminManager() {
+        require(
+            msg.sender == STAKING_MANAGER || msg.sender == owner(),
+            NotAdminManager(msg.sender)
+        );
         _;
     }
 
@@ -72,7 +74,10 @@ contract ValidatorManager is
     }
 
     /// @inheritdoc IValidatorManager
-    function initialize(address verifier, bytes32 programKey) external override initializer {
+    function initialize(
+        address verifier,
+        bytes32 programKey
+    ) external override initializer {
         SP1_VERIFIER = verifier;
         NAME = "ValidatorManager";
         VERSION = "1";
@@ -95,82 +100,112 @@ contract ValidatorManager is
     }
 
     /// @inheritdoc IValidatorManager
-    function submitAttestation(BridgeAttestation calldata attestation)
-        external
-        override
-        whenNotPaused
-    {
+    function submitAttestation(
+        BridgeAttestation calldata attestation
+    ) external override whenNotPaused {
         VMStorage storage $ = _loadStorage();
 
         require(msg.sender == attestation.validator, NotAllowed());
-        require($.validators[msg.sender].status == ValidatorStatus.Active, ValidatorNotRegistered());
+        require(
+            $.validators[msg.sender].status == ValidatorStatus.Active,
+            ValidatorNotRegistered()
+        );
 
-        bytes32 attestationKey = keccak256(abi.encode(attestation.chainId, attestation.bridgeRoot));
+        bytes32 attestationKey = keccak256(
+            abi.encode(attestation.chainId, attestation.bridgeRoot)
+        );
         require(!$.attestations[msg.sender][attestationKey], AlreadyAttested());
 
         uint256[4] memory blsPublicKey = $.validators[msg.sender].blsPublicKey;
-        uint256[2] memory msgToVerify = proofOfPossessionMessage(blsPublicKey, attestation);
+        uint256[2] memory msgToVerify = proofOfPossessionMessage(
+            blsPublicKey,
+            attestation
+        );
 
-        (bool pairingSuccess, bool callSuccess) =
-            BLS.verifySingle(attestation.signature, blsPublicKey, msgToVerify);
-        require(pairingSuccess && callSuccess, IStakeManagerTypes.InvalidBLSSignature());
+        (bool pairingSuccess, bool callSuccess) = BLS.verifySingle(
+            attestation.signature,
+            blsPublicKey,
+            msgToVerify
+        );
+        require(
+            pairingSuccess && callSuccess,
+            IStakeManagerTypes.InvalidBLSSignature()
+        );
 
         $.attestations[msg.sender][attestationKey] = true;
         _updatePreConfirmation($, attestationKey, 1);
 
         emit AttestationSubmitted(
-            msg.sender, attestation.chainId, attestation.bridgeRoot, attestation.blockNumber
+            msg.sender,
+            attestation.chainId,
+            attestation.bridgeRoot,
+            attestation.blockNumber
         );
     }
 
     /// @inheritdoc IValidatorManager
     /// @dev This function needs some more work
     /// @dev solbls doesnt support aggregated bls keys
-    function submitAggregatedAttestation(AggregatedBridgeAttestation calldata attestation)
-        external
-        override
-        whenNotPaused
-    {
+    function submitAggregatedAttestation(
+        AggregatedBridgeAttestation calldata attestation
+    ) external override whenNotPaused {
         VMStorage storage $ = _loadStorage();
 
         require(attestation.participants.length > 0, NoParticipants());
 
-        bytes32 attestationKey = keccak256(abi.encode(attestation.chainId, attestation.bridgeRoot));
+        bytes32 attestationKey = keccak256(
+            abi.encode(attestation.chainId, attestation.bridgeRoot)
+        );
 
         for (uint256 i = 0; i < attestation.participants.length; i++) {
             address participant = attestation.participants[i];
-            require(!$.attestations[participant][attestationKey], AlreadyAttested());
             require(
-                $.validators[participant].status == ValidatorStatus.Active, ValidatorNotRegistered()
+                !$.attestations[participant][attestationKey],
+                AlreadyAttested()
+            );
+            require(
+                $.validators[participant].status == ValidatorStatus.Active,
+                ValidatorNotRegistered()
             );
         }
 
         uint256[2] memory msgToVerify = proofOfPossessionMessage(attestation);
         (bool pairingSuccess, bool callSuccess) = BLS.verifySingle(
-            attestation.aggregatedSignature, attestation.aggregatedPublicKey, msgToVerify
+            attestation.aggregatedSignature,
+            attestation.aggregatedPublicKey,
+            msgToVerify
         );
-        require(pairingSuccess && callSuccess, IStakeManagerTypes.InvalidBLSSignature());
+        require(
+            pairingSuccess && callSuccess,
+            IStakeManagerTypes.InvalidBLSSignature()
+        );
 
         for (uint256 i = 0; i < attestation.participants.length; i++) {
             $.attestations[attestation.participants[i]][attestationKey] = true;
         }
 
-        _updatePreConfirmation($, attestationKey, attestation.participants.length);
+        _updatePreConfirmation(
+            $,
+            attestationKey,
+            attestation.participants.length
+        );
 
         emit AttestationSubmitted(
-            msg.sender, attestation.chainId, attestation.bridgeRoot, attestation.blockNumber
+            msg.sender,
+            attestation.chainId,
+            attestation.bridgeRoot,
+            attestation.blockNumber
         );
     }
 
     /// @inheritdoc IValidatorManager
-    function isRootVerified(RootParams calldata params)
-        external
-        view
-        override
-        returns (bool verified)
-    {
+    function isRootVerified(
+        RootParams calldata params
+    ) external view override returns (bool verified) {
         VMStorage storage $ = _loadStorage();
-        bytes32 attestationKey = keccak256(abi.encode(params.chainId, params.bridgeRoot));
+        bytes32 attestationKey = keccak256(
+            abi.encode(params.chainId, params.bridgeRoot)
+        );
         return $.preConfirmations[attestationKey].confirmed;
     }
 
@@ -178,53 +213,63 @@ contract ValidatorManager is
     function updateValidatorStatus(
         address validator,
         ValidatorStatus status
-    )
-        external
-        override
-        onlyStakeManager
-    {
+    ) external override onlyAdminManager {
         VMStorage storage $ = _loadStorage();
         ValidatorInfo storage info = $.validators[validator];
         info.status = status;
 
         if (status == ValidatorStatus.Active) {
             $.activeValidators.add(validator);
-        } else if (status == ValidatorStatus.Unstaking || status == ValidatorStatus.Inactive) {
+        } else if (
+            status == ValidatorStatus.Unstaking ||
+            status == ValidatorStatus.Inactive
+        ) {
             $.activeValidators.remove(validator);
         }
     }
 
     /// @inheritdoc IValidatorManager
-    function getValidator(address validator)
-        external
-        view
-        override
-        returns (ValidatorInfo memory info)
-    {
+    function getValidator(
+        address validator
+    ) external view override returns (ValidatorInfo memory info) {
         VMStorage storage $ = _loadStorage();
         return $.validators[validator];
     }
 
     /// @inheritdoc IValidatorManager
-    function getActiveValidators() external view override returns (address[] memory validators) {
+    function getActiveValidators()
+        external
+        view
+        override
+        returns (address[] memory validators)
+    {
         VMStorage storage $ = _loadStorage();
         return $.activeValidators.values();
     }
 
     /// @inheritdoc IValidatorManager
-    function finaliseAttestations(VerificationParams calldata params) external override onlyOwner {
+    function finaliseAttestations(
+        VerificationParams calldata params
+    ) external override onlyOwner {
         VMStorage storage $ = _loadStorage();
 
-        ISP1Verifier(SP1_VERIFIER).verifyProof(PROGRAM_KEY, params.publicValues, params.proofBytes);
+        ISP1Verifier(SP1_VERIFIER).verifyProof(
+            PROGRAM_KEY,
+            params.publicValues,
+            params.proofBytes
+        );
 
-        VerificationPublicValues memory publicValues =
-            abi.decode(params.publicValues, (VerificationPublicValues));
+        VerificationPublicValues memory publicValues = abi.decode(
+            params.publicValues,
+            (VerificationPublicValues)
+        );
         require(publicValues.chainId == CHAIN_ID, InvalidChainId());
 
         IStakeManager manager = IStakeManager(STAKING_MANAGER);
 
         for (uint256 i = 0; i < publicValues.equivocators.length; i++) {
-            IStakeManagerTypes.SlashParams memory slashParams = publicValues.equivocators[i];
+            IStakeManagerTypes.SlashParams memory slashParams = publicValues
+                .equivocators[i];
             ValidatorInfo storage info = $.validators[slashParams.validator];
 
             manager.slashValidator(slashParams);
@@ -236,7 +281,11 @@ contract ValidatorManager is
             ValidatorInfo storage info = $.validators[attestation.validator];
 
             info.attestationCount++;
-            emit RootVerified(attestation.chainId, attestation.bridgeRoot, attestation.blockNumber);
+            emit RootVerified(
+                attestation.chainId,
+                attestation.bridgeRoot,
+                attestation.blockNumber
+            );
         }
 
         _updateEpoch();
@@ -246,12 +295,7 @@ contract ValidatorManager is
     function proofOfPossessionMessage(
         uint256[4] memory blsPubkey,
         BridgeAttestation calldata attestation
-    )
-        public
-        view
-        override
-        returns (uint256[2] memory)
-    {
+    ) public view override returns (uint256[2] memory) {
         bytes memory messageBytes = abi.encodePacked(
             blsPubkey[0],
             blsPubkey[1],
@@ -268,12 +312,9 @@ contract ValidatorManager is
     }
 
     /// @inheritdoc IValidatorManager
-    function proofOfPossessionMessage(AggregatedBridgeAttestation calldata attestation)
-        public
-        view
-        override
-        returns (uint256[2] memory)
-    {
+    function proofOfPossessionMessage(
+        AggregatedBridgeAttestation calldata attestation
+    ) public view override returns (uint256[2] memory) {
         bytes memory messageBytes = abi.encodePacked(
             attestation.aggregatedPublicKey[0],
             attestation.aggregatedPublicKey[1],
@@ -290,9 +331,14 @@ contract ValidatorManager is
     }
 
     /// @inheritdoc IValidatorManager
-    function addValidator(ValidatorInfo memory info) external override onlyStakeManager {
+    function addValidator(
+        ValidatorInfo memory info
+    ) external override onlyAdminManager {
         VMStorage storage $ = _loadStorage();
-        require($.validators[info.wallet].status == ValidatorStatus.Inactive, NotAllowed());
+        require(
+            $.validators[info.wallet].status == ValidatorStatus.Inactive,
+            NotAllowed()
+        );
         $.validators[info.wallet] = info;
         $.activeValidators.add(info.wallet);
 
@@ -300,10 +346,13 @@ contract ValidatorManager is
     }
 
     /// @inheritdoc IValidatorManager
-    function removeValidator(address validator) external override onlyStakeManager {
+    function removeValidator(
+        address validator
+    ) external override onlyAdminManager {
         VMStorage storage $ = _loadStorage();
         require(
-            $.validators[validator].status == ValidatorStatus.Unstaking, UnableToRemoveValidator()
+            $.validators[validator].status == ValidatorStatus.Unstaking,
+            UnableToRemoveValidator()
         );
         $.activeValidators.remove(validator);
         ValidatorInfo memory info = $.validators[validator];
@@ -325,7 +374,12 @@ contract ValidatorManager is
     }
 
     /// @inheritdoc IValidatorManager
-    function getEpochsPerYear() external view override returns (uint256 epochs) {
+    function getEpochsPerYear()
+        external
+        view
+        override
+        returns (uint256 epochs)
+    {
         // 365.25 days
         return 31557600 / EPOCH_DURATION;
     }
@@ -337,16 +391,19 @@ contract ValidatorManager is
 
         require(activeValidators.length > 0, NoParticipants());
 
-        ValidatorInfo[] memory validatorInfos = new ValidatorInfo[](activeValidators.length);
+        ValidatorInfo[] memory validatorInfos = new ValidatorInfo[](
+            activeValidators.length
+        );
         for (uint256 i = 0; i < activeValidators.length; i++) {
             validatorInfos[i] = $.validators[activeValidators[i]];
         }
 
-        IStakeManagerTypes.RewardsParams memory params = IStakeManagerTypes.RewardsParams({
-            epoch: EPOCH,
-            epochDuration: EPOCH_DURATION,
-            recipients: validatorInfos
-        });
+        IStakeManagerTypes.RewardsParams memory params = IStakeManagerTypes
+            .RewardsParams({
+                epoch: EPOCH,
+                epochDuration: EPOCH_DURATION,
+                recipients: validatorInfos
+            });
 
         IStakeManager(STAKING_MANAGER).distributeRewards(params);
     }
@@ -360,9 +417,7 @@ contract ValidatorManager is
         VMStorage storage $,
         bytes32 attestationKey,
         uint256 additionalCount
-    )
-        internal
-    {
+    ) internal {
         PreConfirmation storage pc = $.preConfirmations[attestationKey];
         pc.count += additionalCount;
 
@@ -382,13 +437,19 @@ contract ValidatorManager is
     /// @notice Compute how many epochs have elapsed since a timestamp
     /// @param timestamp Reference timestamp
     /// @return epochs Elapsed epochs since the timestamp
-    function epochsElapsedSince(uint256 timestamp) public view override returns (uint256 epochs) {
+    function epochsElapsedSince(
+        uint256 timestamp
+    ) public view override returns (uint256 epochs) {
         if (block.timestamp <= timestamp || EPOCH_DURATION == 0) return 0;
-        epochs = Math.saturatingSub(block.timestamp, timestamp) / EPOCH_DURATION;
+        epochs =
+            Math.saturatingSub(block.timestamp, timestamp) /
+            EPOCH_DURATION;
     }
 
     /// @notice Authorize contract upgrades (UUPS)
     /// @dev Only owner can authorize upgrades
     /// @param newImplementation New implementation address
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 }

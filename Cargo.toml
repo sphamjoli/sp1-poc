@@ -5,6 +5,8 @@ members = [
   "crates/bridge-script",
   "crates/bridge-validator-evm",
   "crates/bls-test-utils",
+  "crates/node-manager",
+   "crates/chain-manager",
 ]
 resolver = "2"
 

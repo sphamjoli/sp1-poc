@@ -177,7 +177,8 @@ contract Bridge is
             claimParams.depositIndex,
             claimIndex,
             claimParams.sourceRoot,
-            claimRoot
+            claimRoot,
+            CHAIN_ID
         );
     }
 

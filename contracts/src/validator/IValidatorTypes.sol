@@ -34,7 +34,7 @@ interface IValidatorTypes {
     error AlreadyAttested();
 
     /// @notice Thrown when msg.sender is not the StakeManager contract
-    error NotStakeManager(address caller);
+    error NotAdminManager(address caller);
 
     error UnableToRemoveValidator();
 
@@ -167,7 +167,11 @@ interface IValidatorTypes {
     /// @param validator Address of new validator
     /// @param stakeAmount Amount staked
     /// @param blsPublicKey BLS public key registered
-    event ValidatorStaked(address indexed validator, uint256 stakeAmount, bytes blsPublicKey);
+    event ValidatorStaked(
+        address indexed validator,
+        uint256 stakeAmount,
+        bytes blsPublicKey
+    );
 
     /// @notice Emitted when validator submits bridge attestation
     /// @param validator Address of validator
@@ -175,14 +179,21 @@ interface IValidatorTypes {
     /// @param bridgeRoot Bridge root that was attested
     /// @param blockNumber Block number of attestation
     event AttestationSubmitted(
-        address indexed validator, uint256 indexed chainId, bytes32 bridgeRoot, uint256 blockNumber
+        address indexed validator,
+        uint256 indexed chainId,
+        bytes32 bridgeRoot,
+        uint256 blockNumber
     );
 
     /// @notice Emitted when bridge root is verified by SP1 system
     /// @param chainId Source chain identifier
     /// @param bridgeRoot Bridge root that was verified
     /// @param blockNumber Block number verified
-    event RootVerified(uint256 indexed chainId, bytes32 indexed bridgeRoot, uint256 blockNumber);
+    event RootVerified(
+        uint256 indexed chainId,
+        bytes32 indexed bridgeRoot,
+        uint256 blockNumber
+    );
 
     /// @notice Emitted when a new validator is added to the active set
     /// @param wallet Validator's wallet address used for rewards
@@ -203,7 +214,8 @@ interface IValidatorTypes {
     /// @param currentStakingManager Currently set manageraddress
     /// @param newStakingManager New manager address
     event UpdatedStakingManager(
-        address indexed currentStakingManager, address indexed newStakingManager
+        address indexed currentStakingManager,
+        address indexed newStakingManager
     );
 
     /// @notice emitted when bridge roots have been verified
@@ -215,5 +227,9 @@ interface IValidatorTypes {
     /// @param minimumStake New minimum stake requirement
     /// @param slashingRate New slashing rate percentage
     /// @param unstakingDelay New unstaking delay in seconds
-    event ParametersUpdated(uint256 minimumStake, uint256 slashingRate, uint256 unstakingDelay);
+    event ParametersUpdated(
+        uint256 minimumStake,
+        uint256 slashingRate,
+        uint256 unstakingDelay
+    );
 }
