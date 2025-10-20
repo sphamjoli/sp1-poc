@@ -89,7 +89,7 @@ interface IStakeManagerTypes {
     /// @param rewardReserves Token reserves available for rewards
     /// @param principal Total staked principal per token
     /// @param __gap Reserved for future storage
-    struct SMStorage {
+    struct SmStorage {
         mapping(address validator => ValidatorBalance balance) balances;
         mapping(bytes32 version => StakeManagerConfig config) stakingManagerVersions;
         mapping(address token => uint256) rewardReserves;
@@ -259,8 +259,7 @@ interface IStakeManagerTypes {
     /// @param currentValidatorManager Previous manager address
     /// @param newValidatorManager New manager address
     event UpdatedValidatorManager(
-        address indexed currentValidatorManager,
-        address indexed newValidatorManager
+        address indexed currentValidatorManager, address indexed newValidatorManager
     );
 
     /// @notice Emitted when a validator claims rewards
@@ -268,9 +267,7 @@ interface IStakeManagerTypes {
     /// @param reward Amount claimed
     /// @param when Claim timestamp
     event ValidatorRewardsClaimed(
-        address indexed validator,
-        uint256 indexed reward,
-        uint256 indexed when
+        address indexed validator, uint256 indexed reward, uint256 indexed when
     );
 
     /// @notice Emitted when rewards are allocated to a validator
@@ -278,9 +275,7 @@ interface IStakeManagerTypes {
     /// @param reward Amount allocated
     /// @param correctAttestations Count of correct attestations
     event ValidatorRewarded(
-        address indexed validator,
-        uint256 indexed reward,
-        uint256 correctAttestations
+        address indexed validator, uint256 indexed reward, uint256 correctAttestations
     );
 
     /// @notice Emitted when rewards are distributed
@@ -288,17 +283,14 @@ interface IStakeManagerTypes {
     /// @param totalValidator Number of validators paid
     /// @param when Distribution timestamp
     event RewardsDistributed(
-        uint256 indexed total,
-        uint256 indexed totalValidator,
-        uint256 indexed when
+        uint256 indexed total, uint256 indexed totalValidator, uint256 indexed when
     );
 
     /// @notice Emitted when stake manager config updates
     /// @param oldConfig Previous config
     /// @param newConfig New config
     event StakeManagerConfigUpdated(
-        StakeManagerConfig indexed oldConfig,
-        StakeManagerConfig indexed newConfig
+        StakeManagerConfig indexed oldConfig, StakeManagerConfig indexed newConfig
     );
 
     /// @notice Emitted when a validator is slashed
@@ -319,9 +311,5 @@ interface IStakeManagerTypes {
     /// @param token ERC20 token used for rewards
     /// @param amountReceived Amount received by the contract
     /// @param funder Address providing the funds
-    event RewardTopUp(
-        address indexed token,
-        uint256 amountReceived,
-        address indexed funder
-    );
+    event RewardTopUp(address indexed token, uint256 amountReceived, address indexed funder);
 }

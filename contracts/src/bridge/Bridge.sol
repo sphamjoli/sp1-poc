@@ -10,7 +10,8 @@ import {PausableUpgradeable} from
 import {BridgeStorage} from "./BridgeStorage.sol";
 import {IBridge} from "./IBridge.sol";
 import {LocalExitTreeLib, SparseMerkleTree} from "../libs/LocalExitTreeLib.sol";
-import {IValidatorManager, IValidatorTypes} from "../validator/ValidatorManager.sol";
+import {IValidatorManager} from "../validator/ValidatorManager.sol";
+import {IValidatorTypes} from "../validator/IValidatorTypes.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
@@ -115,7 +116,9 @@ contract Bridge is
         require(msg.sender == claimParams.to, InvalidTransaction());
         IValidatorTypes.RootParams memory params = IValidatorTypes.RootParams({
             chainId: claimParams.sourceChain,
-            bridgeRoot: claimParams.sourceRoot
+            bridgeRoot: claimParams.sourceRoot,
+            blockNumber: claimParams.blockNumber,
+            stateRoot: claimParams.stateRoot
         });
         require(
             IValidatorManager(VALIDATOR_MANAGER).isRootVerified(params),

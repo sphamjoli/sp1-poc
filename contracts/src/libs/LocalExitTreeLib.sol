@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
+import {SparseMerkleTree} from "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
 import {IBridgeTypes} from "../bridge/BridgeTypes.sol";
 
 /// @title LocalExitTreeLib
@@ -107,16 +107,17 @@ library LocalExitTreeLib {
         pure
         returns (bytes32 exitLeaf)
     {
-        return keccak256(
-            abi.encode(
-                params.amount,
-                params.token,
-                params.to,
-                params.destinationChain,
-                sourceChain,
-                depositIndex
-            )
-        );
+        assembly {
+            let pointer := mload(0x40)
+            mstore(pointer, mload(params))
+            mstore(add(pointer, 0x20), mload(add(params, 0x20)))
+            mstore(add(pointer, 0x40), mload(add(params, 0x40)))
+            mstore(add(pointer, 0x60), mload(add(params, 0x60)))
+            mstore(add(pointer, 0x80), sourceChain)
+            mstore(add(pointer, 0xA0), depositIndex)
+            exitLeaf := keccak256(pointer, 0xC0)
+            mstore(0x40, add(pointer, 0xC0))
+        }
     }
 
     /// @notice Compute exit leaf hash using ClaimLeaf
@@ -127,20 +128,19 @@ library LocalExitTreeLib {
         pure
         returns (bytes32 exitLeaf)
     {
-        return keccak256(
-            abi.encode(
-                params.sourceDepositIndex,
-                params.sourceChain,
-                params.sourceRoot,
-                params.claimer,
-                params.recipient,
-                params.recipient,
-                params.amount,
-                params.token,
-                params.timestamp,
-                params.destinationChain
-            )
-        );
+        assembly {
+            let pointer := mload(0x40)
+            mstore(pointer, mload(params))
+            // @dev we use 10 here since we need to keep space for
+            // storing the results of keccak256
+            let length := mul(9, 0x20)
+            for { let i := 0x20 } lt(i, length) { i := add(i, 0x20) } {
+                mstore(add(pointer, i), mload(add(params, 0x20)))
+            }
+
+            exitLeaf := keccak256(pointer, length)
+            mstore(0x40, add(pointer, length))
+        }
     }
     /// @notice Check if a leaf exists in the tree
     /// @param tree The SMT storage reference

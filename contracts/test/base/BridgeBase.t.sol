@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Test, console} from "forge-std/Test.sol";
-import {stdJson} from "forge-std/StdJson.sol";
-import {SP1VerifierGateway} from "@sp1-contracts/SP1VerifierGateway.sol";
+import {Test} from "forge-std/Test.sol";
 import {BridgeToken} from "../../src/test/BridgeToken.sol";
 import {Bridge} from "../../src/bridge/Bridge.sol";
 import {IBridgeTypes} from "../../src/bridge/BridgeTypes.sol";
 import {Upgrades, Options} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {LocalExitTreeLib, SparseMerkleTree} from "../../src/libs/LocalExitTreeLib.sol";
-import {IERC20Errors} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @title BridgeBaseTest
 /// @notice Base test harness that spins up two forked chains with Bridge and ERC20 test tokens,
@@ -28,17 +25,20 @@ abstract contract BridgeBaseTest is Test, IBridgeTypes {
 
     /// @notice Test user addresses
     address public alice;
+    address public bob;
     address public spha;
     address public james;
+    address public jenifer;
     address public ownerA;
     address public ownerB;
-    address public bob;
-    address public jenifer;
+
+    /// @notice Private keys for owners
+    uint256 public ownerAPrivateKey;
+    uint256 public ownerBPrivateKey;
 
     /// @notice Default token balances for testing
-    uint256 public immutable defaultOwnerTokenBalance = 99999999999999 ether;
-    uint256 public immutable defaultTokenBalance = 1000 ether;
-    uint256 public immutable defaultTransferAmount = 100 ether;
+    uint256 public immutable DEFAULT_OWNER_TOKEN_BALANCE = 99999999999999 ether;
+    uint256 public immutable DEFAULT_TOKEN_BALANCE = 1000 ether;
 
     /// @notice Bridge token for Chain A
     BridgeToken public TOKEN_CHAINA;
@@ -68,8 +68,8 @@ abstract contract BridgeBaseTest is Test, IBridgeTypes {
     /// @notice End-to-end environment bootstrap across two forks
     /// @dev Creates users, forks, deploys bridge/token contracts per chain, mints and distributes balances, labels addresses.
     function setUp() public virtual noGasMetering {
-        ownerA = _createUser("ownerA");
-        ownerB = _createUser("ownerB");
+        (ownerA, ownerAPrivateKey) = _createUserWitPrivateKey("ownerA");
+        (ownerB, ownerBPrivateKey) = _createUserWitPrivateKey("ownerB");
         spha = _createUser("spha");
         james = _createUser("james");
         alice = _createUser("alice");
@@ -101,7 +101,7 @@ abstract contract BridgeBaseTest is Test, IBridgeTypes {
     /// @notice Basic sanity checks for Chain A token configuration
     function test_token_Config() external {
         vm.selectFork(FORKA_ID);
-        assertEq(TOKEN_CHAINA.totalSupply(), defaultOwnerTokenBalance);
+        assertEq(TOKEN_CHAINA.totalSupply(), DEFAULT_OWNER_TOKEN_BALANCE);
         assertEq(TOKEN_CHAINA.name(), "TOKEN Chain A");
         assertEq(TOKEN_CHAINA.symbol(), "TKCA");
     }
@@ -123,7 +123,7 @@ abstract contract BridgeBaseTest is Test, IBridgeTypes {
         vm.startPrank(sender);
         vm.selectFork(forkId);
         BridgeToken token = new BridgeToken(name, symbol);
-        token.mint(sender, defaultOwnerTokenBalance);
+        token.mint(sender, DEFAULT_OWNER_TOKEN_BALANCE);
         return token;
     }
 
@@ -133,7 +133,7 @@ abstract contract BridgeBaseTest is Test, IBridgeTypes {
         vm.startPrank(ownerA);
 
         TOKEN_CHAINA = new BridgeToken("TOKEN Chain A", "TKCA");
-        TOKEN_CHAINA.mint(ownerA, defaultOwnerTokenBalance);
+        TOKEN_CHAINA.mint(ownerA, DEFAULT_OWNER_TOKEN_BALANCE);
 
         address bridgeChainA = Upgrades.deployUUPSProxy(
             "Bridge.sol", abi.encodeCall(Bridge.initialize, (ownerA)), options
@@ -153,7 +153,7 @@ abstract contract BridgeBaseTest is Test, IBridgeTypes {
 
         // Fixed display name typo to keep naming consistent with Chain A
         TOKEN_CHAINB = new BridgeToken("TOKEN Chain B", "TKCB");
-        TOKEN_CHAINB.mint(ownerB, defaultOwnerTokenBalance);
+        TOKEN_CHAINB.mint(ownerB, DEFAULT_OWNER_TOKEN_BALANCE);
 
         address bridgeChainB = Upgrades.deployUUPSProxy(
             "Bridge.sol", abi.encodeCall(Bridge.initialize, (ownerB)), options
@@ -182,15 +182,19 @@ abstract contract BridgeBaseTest is Test, IBridgeTypes {
     function _distributeTokensOnChain(BridgeToken token, uint256 forkId) internal {
         _prankOwnerOnChain(forkId);
 
-        address[] memory users = new address[](4);
+        address[] memory users = new address[](5);
         users[0] = spha;
         users[1] = james;
         users[2] = alice;
         users[3] = bob;
+        users[4] = jenifer;
 
         for (uint256 i = 0; i < users.length; i++) {
-            token.transfer(users[i], defaultTokenBalance);
-            assertEq(token.balanceOf(users[i]), defaultTokenBalance);
+            require(
+                token.transfer(users[i], DEFAULT_TOKEN_BALANCE),
+                "_distributeTokensOnChain:Transfer Failed"
+            );
+            assertEq(token.balanceOf(users[i]), DEFAULT_TOKEN_BALANCE);
         }
 
         vm.stopPrank();
@@ -216,8 +220,21 @@ abstract contract BridgeBaseTest is Test, IBridgeTypes {
     /// @return user Newly created payable address
     function _createUser(string memory name) internal returns (address payable user) {
         user = payable(makeAddr(name));
-        vm.deal({account: user, newBalance: 1000 ether});
+        vm.deal({account: user, newBalance: DEFAULT_TOKEN_BALANCE});
         vm.label(user, name);
+    }
+
+    /// @notice Create a new test user with funded native balance and labels it
+    /// @param name Label to assign to the created address
+    /// @return (account,privateKey) Newly created payable address
+    function _createUserWitPrivateKey(string memory name)
+        internal
+        returns (address payable, uint256)
+    {
+        (address user, uint256 userPk) = makeAddrAndKey(name);
+        vm.deal({account: user, newBalance: DEFAULT_TOKEN_BALANCE});
+        vm.label(user, name);
+        return (payable(user), userPk);
     }
 
     /// @notice Create a new test user, fund native and token balances on a specified chain
@@ -235,20 +252,30 @@ abstract contract BridgeBaseTest is Test, IBridgeTypes {
     {
         _prankOwnerOnChain(forkId);
         user = payable(makeAddr(name));
-        vm.deal({account: user, newBalance: 1000 ether});
-        token.transfer(user, defaultTokenBalance);
-        assertEq(token.balanceOf(user), defaultTokenBalance);
+        vm.deal({account: user, newBalance: DEFAULT_TOKEN_BALANCE});
+        require(
+            token.transfer(user, DEFAULT_TOKEN_BALANCE),
+            "_createUserWithTokenBalance: Transfer failed"
+        );
+        assertEq(token.balanceOf(user), DEFAULT_TOKEN_BALANCE);
         vm.stopPrank();
     }
 
     /// @notice Begin an owner prank on the correct chain based on fork id
     /// @param forkId Fork identifier used to choose ownerA or ownerB
-    function _prankOwnerOnChain(uint256 forkId) internal {
+    function _prankOwnerOnChain(uint256 forkId)
+        internal
+        returns (address currentOwner, uint256 currentOwnerPK)
+    {
         vm.selectFork(forkId);
         if (forkId == FORKA_ID) {
             vm.startPrank(ownerA);
+            currentOwner = ownerA;
+            currentOwnerPK = ownerAPrivateKey;
         } else {
             vm.startPrank(ownerB);
+            currentOwner = ownerB;
+            currentOwnerPK = ownerBPrivateKey;
         }
     }
 }

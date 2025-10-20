@@ -2,26 +2,22 @@
 pragma solidity ^0.8.30;
 
 import {StakeManager} from "../../src/stake/StakeManager.sol";
+import {BridgeToken} from "../../src/test/BridgeToken.sol";
 import {ValidatorManager} from "../../src/validator/ValidatorManager.sol";
 import {IStakeManagerTypes} from "../../src/stake/IStakeManagerTypes.sol";
 import {IValidatorTypes} from "../../src/validator/IValidatorManager.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {Test, console} from "forge-std/Test.sol";
 import {BLS} from "solbls/BLS.sol";
-import "./BridgeBase.t.sol";
+import {BridgeBaseTest} from "./BridgeBase.t.sol";
+import {console} from "forge-std/Test.sol";
 
-/// @title StakeManagerBaseTest
-/// @notice Base test contract for StakeManager functionality with BLS signature support
-/// @dev Extends BridgeBaseTest to provide dual-chain testing capabilities for staking operations
 abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
     using stdJson for string;
     using BLS for *;
 
-    /// @dev Maximum iterations allowed when scanning JSON arrays to prevent infinite loops
     uint256 internal constant MAX_JSON_SCAN_ITERATIONS = 1000;
 
-    /// @dev Default test configuration values
     uint256 internal constant DEFAULT_MIN_STAKE = 100 ether;
     uint256 internal constant DEFAULT_MIN_WITHDRAW = 1 ether;
     uint256 internal constant DEFAULT_UNSTAKE_DELAY = 2 days;
@@ -32,62 +28,43 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
     uint32 internal constant DEFAULT_MAX_MISSED_PROOFS = 5;
     uint32 internal constant DEFAULT_SLASHING_RATE = 1000;
 
-    /// @dev JSON parsing constants
     uint8 internal constant JSON_SPACE = 0x20;
     uint8 internal constant JSON_TAB = 0x09;
     uint8 internal constant JSON_NEWLINE = 0x0A;
     uint8 internal constant JSON_CARRIAGE_RETURN = 0x0D;
-
-    /// @notice '['
     uint8 internal constant JSON_ARRAY_START = 0x5B;
 
-    /// @notice StakeManager contract instance for Chain A
     StakeManager public stakeManagerA;
-
-    /// @notice ValidatorManager contract instance for Chain A
     ValidatorManager public validatorManagerA;
-
-    /// @notice StakeManager contract instance for Chain B
     StakeManager public stakeManagerB;
-
-    /// @notice ValidatorManager contract instance for Chain B
     ValidatorManager public validatorManagerB;
 
-    /// @notice Staking configuration for Chain A
     StakeManagerConfig public testConfigA;
-
-    /// @notice Staking configuration for Chain B
     StakeManagerConfig public testConfigB;
 
-    /// @notice Configuration version hash for Chain A
     bytes32 public testConfigVersionA;
-
-    /// @notice Configuration version hash for Chain B
     bytes32 public testConfigVersionB;
 
-    /// @notice Structure containing BLS test data for validators
-    /// @param privateKey BLS private key as hex string
-    /// @param publicKey BLS public key components (4 elements)
-    /// @param proofOfPossession BLS proof of possession signature (2 elements)
-    /// @param walletAddress Ethereum wallet address
-    /// @param domain BLS domain separator
-    /// @param messageHash Message hash used for signing (2 elements)
     struct BlsTestData {
         string privateKey;
         string[4] publicKey;
-        string[2] proofOfPossession;
         string walletAddress;
-        string domain;
-        string[2] messageHash;
+        string domainStake;
+        string domainValidator;
     }
 
-    /// @notice Array of all loaded BLS test data
-    BlsTestData[] public blsTestData;
+    struct ProofData {
+        string[2] messageHashStake;
+        string[2] messageHashValidator;
+        string[2] proofOfPossessionStake;
+        string[2] proofOfPossessionValidator;
+        uint256 chainId;
+    }
 
-    /// @notice Mapping from validator address to their BLS test data
     mapping(address => BlsTestData) public validatorBlsData;
+    mapping(address => mapping(uint256 => ProofData)) public validatorProofData;
 
-    function setUp() public override noGasMetering {
+    function setUp() public virtual override noGasMetering {
         super.setUp();
         _loadBlsTestData();
         _deployStakeManager(FORKA_ID);
@@ -98,11 +75,6 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         vm.label(address(validatorManagerB), "validatorManagerB");
     }
 
-    /// @notice Scans JSON array length by checking for a specific field
-    /// @dev Protected against infinite loops with MAX_JSON_SCAN_ITERATIONS limit
-    /// @param json The JSON string to scan
-    /// @param field The field name to look for in each array element
-    /// @return len The number of array elements found
     function _scanArrayLengthByKey(
         string memory json,
         string memory field
@@ -121,8 +93,6 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         }
     }
 
-    /// @notice Loads BLS test data from JSON file
-    /// @dev Reads from test/data/bls.json and supports both single object and array formats
     function _loadBlsTestData() internal {
         string memory root = vm.projectRoot();
         string memory path = string.concat(root, "/test/data/bls.json");
@@ -139,58 +109,90 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         console.log("Parsing %s BLS test case(s)", length);
 
         for (uint256 i = 0; i < length; i++) {
-            BlsTestData memory data = _parseBlsDataAtIndex(json, i, isArray);
-
-            address walletAddr = vm.parseAddress(data.walletAddress);
-            require(walletAddr != address(0), "Invalid wallet address in BLS test data");
-
-            blsTestData.push(data);
-            validatorBlsData[walletAddr] = data;
-            console.log("Loaded BLS data for address:", data.walletAddress);
+            _parseBlsDataAtIndex(json, i, isArray);
         }
     }
 
-    /// @notice Parses BLS test data at a specific index
-    /// @param json The JSON string containing test data
-    /// @param index The index to parse (ignored if not array)
-    /// @param isArray Whether the JSON is an array format
-    /// @return data The parsed BLS test data
-    function _parseBlsDataAtIndex(
-        string memory json,
-        uint256 index,
-        bool isArray
-    )
-        internal
-        pure
-        returns (BlsTestData memory data)
-    {
+    function _parseBlsDataAtIndex(string memory json, uint256 index, bool isArray) internal {
         string memory base = isArray ? string.concat("$[", vm.toString(index), "]") : "$";
+
+        BlsTestData memory data;
 
         data.privateKey = vm.parseJsonString(json, string.concat(base, ".private_key"));
         data.walletAddress = vm.parseJsonString(json, string.concat(base, ".wallet_address"));
-        data.domain = vm.parseJsonString(json, string.concat(base, ".domain"));
+        data.domainStake = vm.parseJsonString(json, string.concat(base, ".domain_staking_manager"));
+        data.domainValidator =
+            vm.parseJsonString(json, string.concat(base, ".domain_validator_manager"));
 
         for (uint256 i = 0; i < 4; i++) {
             data.publicKey[i] =
                 vm.parseJsonString(json, string.concat(base, ".public_key[", vm.toString(i), "]"));
         }
 
-        for (uint256 i = 0; i < 2; i++) {
-            data.proofOfPossession[i] = vm.parseJsonString(
-                json, string.concat(base, ".proof_of_possession[", vm.toString(i), "]")
-            );
+        address walletAddr = vm.parseAddress(data.walletAddress);
+        require(walletAddr != address(0), "Invalid wallet address in BLS test data");
+
+        validatorBlsData[walletAddr] = data;
+
+        uint256 proofCount = 0;
+        for (uint256 proofIdx = 0; proofIdx < MAX_JSON_SCAN_ITERATIONS; proofIdx++) {
+            string memory proofBase = string.concat(base, ".proof[", vm.toString(proofIdx), "]");
+            try vm.parseJsonString(json, string.concat(proofBase, ".message_hash_stake_manager[0]"))
+            returns (string memory) {
+                proofCount++;
+            } catch {
+                break;
+            }
         }
 
-        for (uint256 i = 0; i < 2; i++) {
-            data.messageHash[i] =
-                vm.parseJsonString(json, string.concat(base, ".message_hash[", vm.toString(i), "]"));
+        require(proofCount > 0 && proofCount <= 2, "Expected 1 or 2 proof entries per validator");
+
+        console.log("Loaded BLS data for address:", data.walletAddress);
+        console.log("  Found %s proof entries", proofCount);
+
+        for (uint256 proofIdx = 0; proofIdx < proofCount; proofIdx++) {
+            string memory proofBase = string.concat(base, ".proof[", vm.toString(proofIdx), "]");
+
+            ProofData memory proofData;
+
+            proofData.chainId = vm.parseJsonUint(json, string.concat(proofBase, ".chain_id"));
+
+            for (uint256 i = 0; i < 2; i++) {
+                proofData.messageHashStake[i] = vm.parseJsonString(
+                    json,
+                    string.concat(proofBase, ".message_hash_stake_manager[", vm.toString(i), "]")
+                );
+
+                proofData.messageHashValidator[i] = vm.parseJsonString(
+                    json,
+                    string.concat(
+                        proofBase, ".message_hash_validator_manager[", vm.toString(i), "]"
+                    )
+                );
+
+                proofData.proofOfPossessionStake[i] = vm.parseJsonString(
+                    json,
+                    string.concat(
+                        proofBase, ".proof_of_possession_stake_manager[", vm.toString(i), "]"
+                    )
+                );
+
+                proofData.proofOfPossessionValidator[i] = vm.parseJsonString(
+                    json,
+                    string.concat(
+                        proofBase, ".proof_of_possession_validator_manager[", vm.toString(i), "]"
+                    )
+                );
+            }
+
+            validatorProofData[walletAddr][proofData.chainId] = proofData;
+
+            console.log("  Proof[%s] -> ChainId: %s", proofIdx, proofData.chainId);
+            console.log("    PoP Stake[0]: %s", proofData.proofOfPossessionStake[0]);
+            console.log("    PoP Validator[0]: %s", proofData.proofOfPossessionValidator[0]);
         }
     }
 
-    /// @notice Determines if a JSON string represents an array
-    /// @dev Checks for opening bracket '[' after skipping whitespace
-    /// @param json The JSON string to check
-    /// @return True if the JSON represents an array, false otherwise
     function _isJsonArray(string memory json) internal pure returns (bool) {
         bytes memory jsonBytes = bytes(json);
         if (jsonBytes.length == 0) return false;
@@ -207,9 +209,6 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         return false;
     }
 
-    /// @notice Deploys StakeManager and ValidatorManager contracts on specified fork
-    /// @dev Creates UUPS proxy contracts with appropriate initialization parameters
-    /// @param forkId The fork identifier (FORKA_ID or FORKB_ID)
     function _deployStakeManager(uint256 forkId) internal {
         vm.selectFork(forkId);
 
@@ -217,10 +216,10 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
 
         if (forkId == FORKA_ID) {
             (stakeManagerA, validatorManagerA, testConfigA, testConfigVersionA) =
-                _deployStakeManagerForChain(address(TOKEN_CHAINA));
+                _deployStakeManagerForChain(address(TOKEN_CHAINA), true);
         } else if (forkId == FORKB_ID) {
             (stakeManagerB, validatorManagerB, testConfigB, testConfigVersionB) =
-                _deployStakeManagerForChain(address(TOKEN_CHAINB));
+                _deployStakeManagerForChain(address(TOKEN_CHAINB), false);
         } else {
             revert("Invalid fork ID provided");
         }
@@ -228,9 +227,10 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         vm.stopPrank();
     }
 
-    /// @notice Internal helper to deploy contracts for a specific chain
-    /// @param _stakingToken ERC20 used for staking
-    function _deployStakeManagerForChain(address _stakingToken)
+    function _deployStakeManagerForChain(
+        address _stakingToken,
+        bool _enableStaking
+    )
         internal
         returns (
             StakeManager stakeManager,
@@ -263,9 +263,11 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         validatorManager = ValidatorManager(validatorManagerAddr);
         stakeManager = StakeManager(stakeManagerAddr);
         BridgeToken(_stakingToken).approve(stakeManagerAddr, type(uint256).max);
-        stakeManager.updateValidatorManager(validatorManagerAddr);
-        validatorManager.updateStakingManager(stakeManagerAddr);
-        configVersion = stakeManager.getStakeVersion(config);
+        if (_enableStaking) {
+            stakeManager.updateValidatorManager(validatorManagerAddr);
+            validatorManager.updateStakingManager(stakeManagerAddr);
+            configVersion = stakeManager.getStakeVersion(config);
+        }
     }
 
     function _topupRewards(uint256 forkId, uint256 amount, address rewardsToken) internal {
@@ -277,19 +279,69 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         }
     }
 
-    /// @notice Stakes tokens as a specific user with their BLS credentials
-    /// @dev Requires the user to have BLS test data loaded
-    /// @param user The address of the user staking
-    /// @param amount The amount of tokens to stake
-    /// @param forkId The fork identifier where staking occurs
+    function getValidatorProofData(
+        address validator,
+        uint256 chainId
+    )
+        public
+        view
+        returns (ProofData memory proofData)
+    {
+        return validatorProofData[validator][chainId];
+    }
+
+    function getValidatorBlsData(address validator) public view returns (BlsTestData memory data) {
+        return validatorBlsData[validator];
+    }
+
+    function hasValidProofData(
+        address validator,
+        uint256 chainId
+    )
+        public
+        view
+        returns (bool isValid)
+    {
+        ProofData memory proofData = validatorProofData[validator][chainId];
+        return proofData.chainId == chainId && bytes(proofData.proofOfPossessionStake[0]).length > 0;
+    }
+
+    function getValidatorAttestationSignature(
+        address validator,
+        uint256 forkId
+    )
+        public
+        returns (uint256[2] memory signature)
+    {
+        vm.selectFork(forkId);
+        uint256 chainId = block.chainid;
+
+        ProofData memory proofData = validatorProofData[validator][chainId];
+        require(proofData.chainId == chainId, "No proof data for specified chain");
+
+        signature[0] = vm.parseUint(proofData.proofOfPossessionValidator[0]);
+        signature[1] = vm.parseUint(proofData.proofOfPossessionValidator[1]);
+    }
+
     function _stakeAsUser(address user, uint256 amount, uint256 forkId) internal {
         require(user != address(0), "Invalid user address");
         require(amount > 0, "Stake amount must be greater than zero");
 
+        vm.selectFork(forkId);
+        uint256 chainId = block.chainid;
+
         BlsTestData memory data = validatorBlsData[user];
         require(bytes(data.walletAddress).length > 0, "No BLS data found for user");
 
-        vm.selectFork(forkId);
+        ProofData memory proofData = validatorProofData[user][chainId];
+        require(proofData.chainId == chainId, "No proof data for specified chain");
+
+        console.log("Staking for user:", user);
+        console.log("  Fork ID:", forkId);
+        console.log("  Chain ID:", chainId);
+        console.log("  Using PoP Stake:", proofData.proofOfPossessionStake[0]);
+        console.log("  Public Key[0]:", data.publicKey[0]);
+
         vm.startPrank(user);
 
         uint256[4] memory pubkey = [
@@ -299,8 +351,10 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
             vm.parseUint(data.publicKey[3])
         ];
 
-        uint256[2] memory signature =
-            [vm.parseUint(data.proofOfPossession[0]), vm.parseUint(data.proofOfPossession[1])];
+        uint256[2] memory signature = [
+            vm.parseUint(proofData.proofOfPossessionStake[0]),
+            vm.parseUint(proofData.proofOfPossessionStake[1])
+        ];
 
         if (forkId == FORKA_ID) {
             TOKEN_CHAINA.approve(address(stakeManagerA), amount);
@@ -321,11 +375,6 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         vm.stopPrank();
     }
 
-    /// @notice Begins the unstaking process for a validator
-    /// @dev Must be called by the ValidatorManager contract
-    /// @param validator The address of the validator to unstake
-    /// @param amount The amount to unstake
-    /// @param forkId The fork identifier where unstaking occurs
     function _beginUnstakingAsValidator(
         address validator,
         uint256 amount,
@@ -351,13 +400,6 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         }
     }
 
-    /// @notice Distributes rewards to a validator based on their performance
-    /// @dev Uses the validator's BLS data to create reward distribution parameters
-    /// @notice Calling distribute this way is OK since it assumes that the data
-    /// Will be from the ValidatorManagers perspective
-    /// @param validator The address of the validator receiving rewards
-    /// @param forkId The fork identifier where rewards are distributed
-    /// @param epoch The current epoch to use
     function _distributeRewardsToValidator(
         address validator,
         uint256 forkId,

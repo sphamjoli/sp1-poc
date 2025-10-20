@@ -15,9 +15,7 @@ abstract contract StakeManagerStorage is IStakeManagerTypes {
 
     /// @dev StakeManager storage position
     bytes32 internal constant SM_STORAGE_SLOT =
-        bytes32(
-            uint256(keccak256(abi.encodePacked("com.stakeManager.storage"))) - 1
-        );
+        bytes32(uint256(keccak256(abi.encodePacked("com.stakeManager.storage"))) - 1);
 
     /// @dev The StakeManager contract address
     address public immutable STAKE_MANAGER;
@@ -28,7 +26,7 @@ abstract contract StakeManagerStorage is IStakeManagerTypes {
 
     /// @notice Get StakeManager storage
     /// @return $ Storage struct
-    function _loadStorage() internal pure returns (SMStorage storage $) {
+    function _loadStorage() internal pure returns (SmStorage storage $) {
         bytes32 position = SM_STORAGE_SLOT;
         assembly {
             $.slot := position

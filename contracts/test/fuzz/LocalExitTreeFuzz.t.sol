@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import "forge-std/Test.sol";
-import "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
-import "../../src/libs/LocalExitTreeLib.sol";
+import {SparseMerkleTree} from "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
+import {LocalExitTreeLib} from "../../src/libs/LocalExitTreeLib.sol";
 import {BridgeBaseTest, SparseMerkleTree} from "../base/BridgeBase.t.sol";
 
 contract LocalExitTreeLibFuzzTest is BridgeBaseTest {

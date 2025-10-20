@@ -1,97 +1,262 @@
 [
   {
-    "private_key": "0x0f01de924ca75b39650207994a2fc564453c74339895fad22259c2fbecef2cc6",
+    "private_key": "0x220f74fd8e6be06e46911b95f1347fa73be85d2d9d17de37f7d47ed1b90e0062",
     "public_key": [
-      "0x21978cbe29b10d11221718f0907802d4f1d9f94ec888c937e3573e28a4d9d4f6",
-      "0x12e03ea3bc3cd9365f0905ab0c6ada6d9559aa45b8df7b425dd312ef988c2946",
-      "0x23f1f02d981d1c6b2e088431f526c91062842196baf7eef4089a5a4c21fb9c1b",
-      "0x1b9d3bacea7a7c5c3bedb5e9bf29599a949e4cf6a3d0163e8585afe989689ca9"
-    ],
-    "proof_of_possession": [
-      "0x069d3a42e1b1c53c4d171ed7e0242a3824ca653e5a912e05df7a688368ffd9d1",
-      "0x16478e796fc1199c6d70dafef37339d0cd689685261a4055ff73362764e481cb"
+      "0x08127bdf265572542131a9840202bdf1fa98ce3e9aec94b8b3c2a30712cbb7cf",
+      "0x1d4f768c0426870626bdab86a6307a14f4b4b3597948b3abaff32b0f721a42b9",
+      "0x2f8cf772e295789fff52a34f3af3266ffcab07d35e4c7119d5c048d938dda4bb",
+      "0x0e9d46eb9abf0f4ac7ad2ed522a42017255fffed88754e4fb8ae0d50569e59b5"
     ],
     "wallet_address": "0x328809Bc894f92807417D2dAD6b7C998c1aFdac6",
-    "domain": "StakeManager:BN254:PoP:v1:",
-    "message_hash": [
-      "0x092fa099b01edd34df6b1184dcd6f8cf2f8b2ba91ca863435fc2cafe105b53a9",
-      "0x189f3520b8349996b1079f6350c1c4336d607cbf65c1d38691c1ff281437c081"
+    "domain_staking_manager": "StakeManager:BN254:PoP:v1:",
+    "domain_validator_manager": "ValidatorManager:BN254:PoP:v1:",
+    "proof": [
+      {
+        "message_hash_stake_manager": [
+          "0x27a6d4d942de1a334191b8c7a4c68a0fc7b543a334f08515f580e19a56ae11dd",
+          "0x26cc21b53478fba1a558f5ce37a9d4a2215d872c9fff3f1db00b1f48481c84a0"
+        ],
+        "message_hash_validator_manager": [
+          "0x26aa2ccabe21b5ef404b137aa8db61eb3e2460abb757892697dc85cafcfa569a",
+          "0x2fdf8fe73a00d8d35a4dd4c6c98f97dbe2cc78c2df88c774314776c2a83ef551"
+        ],
+        "proof_of_possession_stake_manager": [
+          "0x2412acc9169ebce99b61f7c96ff354d4b3e3d01a79b0519ed4d57f8ceaf057f9",
+          "0x15c87328638544aa4cdfd5d3bcc558f275b2b6b25c25dd3876712e53e64c0f2c"
+        ],
+        "proof_of_possession_validator_manager": [
+          "0x1bc5b35302b707930f9867ba1e1f2450cf6704b757f34aeb6e5482d049821af6",
+          "0x16017ee6e723ede228fcd64d62120d38557898517c1dd438a48b2d6f506841cd"
+        ],
+        "chain_id": "8453"
+      },
+      {
+        "message_hash_stake_manager": [
+          "0x03c2bba97c9e71574791161f3d77bac9ba09550f2eb81dea5f67baf35b09884a",
+          "0x039aeaa8e635b40765b38b21c377ec6e9f8e013562dcc5f7d51be04cdbb6c054"
+        ],
+        "message_hash_validator_manager": [
+          "0x204476bfb857047fa26f8e58cab296e878ce4d0520ddb0025db91a405b53a4c1",
+          "0x02d82b7e3a4e968cf0b5eebde1d76641cb35bfd4242884358f49e5e8e07851fa"
+        ],
+        "proof_of_possession_stake_manager": [
+          "0x17e09d556a35f7ba9794657a1bcd18ad21bef0bfa97eeadeed3bdbc4c982fcbb",
+          "0x0e04a31bf21ed1089dededf16bcc8f7545d784f09496f582fc8f5a55ee298f02"
+        ],
+        "proof_of_possession_validator_manager": [
+          "0x116cdaf2a6871a4517010b7b36aa2316fb1723fa81a292c499349b58c40c102f",
+          "0x2c19a5e8189f1ffdb659873a3656c45eb5a7580946b5a2a8c87881694493f20f"
+        ],
+        "chain_id": "1"
+      }
     ]
   },
   {
-    "private_key": "0x20666865c672119bd890792796c1fcc6fae3348599b47b93c984e346158bc511",
+    "private_key": "0x1a61fab85d65552c85d47a91a970ded5ed478a67624061bc368d5ed585d38d39",
     "public_key": [
-      "0x1d68bce88eb13d5363f0abe01a31b0b2a8f6f8dcb7ed7bc6f814e3d2369f2f85",
-      "0x2b860cf99ed5845bf89b2200d2e10bbe2683b2dce516e747f59ddcc193f8fa93",
-      "0x2f75d82fc7c5eae237114beed7c84b0ed54398d7a19a40414887dfffc99477e0",
-      "0x15c6361cda019a132fc1fe338745e032a6b15fb1a4ca2581035429c1c4dd1ab1"
-    ],
-    "proof_of_possession": [
-      "0x303e8f2962b1aa1d23d0bcebae7cc1731ddbcbdda0160b0e71587653b9dc9afe",
-      "0x21b40b7a57fbd1ed9ef08c23b43662246582d11676c5cac20004107d67902ce0"
+      "0x03736b1c2a75aa15d284195787b1c8b0dc6a9655f52cbe9dea6499898d22deca",
+      "0x00e71b8f64a19b7f4b033d8dd6d66c836606f9423562f65fb1e258430d0afa1f",
+      "0x13b472bd650e7034a4c64daf328c680f81bde9433872a9178a99733d51333b51",
+      "0x2cfa5e8b5635cf729162c6bab5c93700aa4e00cdb3133a4fdf28e51e9f96c2a6"
     ],
     "wallet_address": "0x1D96F2f6BeF1202E4Ce1Ff6Dad0c2CB002861d3e",
-    "domain": "StakeManager:BN254:PoP:v1:",
-    "message_hash": [
-      "0x1a3ecd5eb55c050cab12648047bba98545b901161954859c014f82b1d382503f",
-      "0x18102c2a4e6007373c21de8a6f02620541c0dcf1037d76e817bec4d3baa76ba2"
+    "domain_staking_manager": "StakeManager:BN254:PoP:v1:",
+    "domain_validator_manager": "ValidatorManager:BN254:PoP:v1:",
+    "proof": [
+      {
+        "message_hash_stake_manager": [
+          "0x1a2959ce5010db41804b29a5a1fd5c28207b1de7553be9e38cdf294b9cb258d5",
+          "0x10df1882dd1b92ca096abce145bd327f611b2aa13764de5c90f2ed96de31afed"
+        ],
+        "message_hash_validator_manager": [
+          "0x0446037db1629a1bbee5e5db1501adfd5227862441a20aa9f4e25b3480f82e72",
+          "0x02a6027680ce8e45dcbb5464048a8d5e07b3d019cee15020b01ed3c6eb5c2a9d"
+        ],
+        "proof_of_possession_stake_manager": [
+          "0x06cd0d5487969d5a5d7e1c34c432d8489b7ea4c39de7360aa89a5e3f4406cb90",
+          "0x1c9c6cdacb045bbf17a5f32bf6bc27be69aa2f537571eadc649aaed17e33c95c"
+        ],
+        "proof_of_possession_validator_manager": [
+          "0x2b9881b332d4fbf6e3c9fd6fc7fbb3a66d6a86c6337e6980fec27cf568c9592a",
+          "0x16c8581d1345212222dd7f15a83c83d274b5d9c26a40410943c7b19078486c8c"
+        ],
+        "chain_id": "8453"
+      },
+      {
+        "message_hash_stake_manager": [
+          "0x2f5e15c30d51aec26af903885d6cb271efb0ea60adf938c83d2d104c799a344f",
+          "0x26938d1012d4b274401bbd5eef49c19fcbe2d0e168f5db52adb14b1257dc3023"
+        ],
+        "message_hash_validator_manager": [
+          "0x02aba412f22a3821d432fb92590f06232bc0e59aee28df11b0a4b7ca60bab4c7",
+          "0x2a0dc1fdd5739c2d603ef80d790025d9adc4350f3347f91d308838bfe47cf620"
+        ],
+        "proof_of_possession_stake_manager": [
+          "0x21384d55cfd5ad8eabbe767b2fbefdc6c13e03e99a733fffbbce7ff206496402",
+          "0x1408da6a6cc16b59abd4fd2c5d9ec83c133e7a7e9a8b73d7d2706640a907dd9a"
+        ],
+        "proof_of_possession_validator_manager": [
+          "0x160877921123fb9e6c8c1221ce815a5ddc08f4699e8cbb3ed366f22fb6b3f63a",
+          "0x2776c74961c8b6253bf4de3ca52655c1fdb7ea69d2fdc1ce50a7bc01e6dfa7d4"
+        ],
+        "chain_id": "1"
+      }
     ]
   },
   {
-    "private_key": "0x12074f2dc3c030b5da488e8de4eabea7dcd671a98474d7fac25bce060ab0c7db",
+    "private_key": "0x1b4153960698c6f45b2463bb67f1ea0b3164f6f587d023c99ceb27c468ebaa35",
     "public_key": [
-      "0x1ab990bb4810f9edfc7bf61e9f2026f9d399421e041f65c63eefd206be09b6c0",
-      "0x137ef9dc4f76208b827c0398f201a2e0d613782c1cb5f5aacb711600dead0285",
-      "0x28e0737fe33b52e1b7f3ec1c7dc0e676051d03d316c84f20376ae3dea617d3e4",
-      "0x0f1ad300a9b8e1a69a920f0b6e7017eaf61adba657e200b4e58c47429e3ca754"
-    ],
-    "proof_of_possession": [
-      "0x2bbafd1d3c9a0a131c66f88b0cfceecb42e31b44ac5f7cf27d3f4f9e33182431",
-      "0x2bca1409e5819542a4629d77a708ceab25c4d32d4ed7979145f78693de967b09"
+      "0x22c189083db0235f40dc00e967575bc8e94792b94fc9ea943081e164854b550e",
+      "0x2cb465d5ce90c24a6bfd062143edf88424153e7724c2a7acd031ef5053a667d9",
+      "0x0fa88ee8a44d71d1735fb618857b9354a55866b301833cd6fc45af686395b563",
+      "0x0b0b3cf5a0a94937a979742f96e20cc3bbd0696de9d2f114585987f0b2bf8c93"
     ],
     "wallet_address": "0xcDFdF57D10EA95520a2CF09119Db2d2afa6F6bf7",
-    "domain": "StakeManager:BN254:PoP:v1:",
-    "message_hash": [
-      "0x0d658e7b1bfcaa0b78151b3050d3b3ee69b7c61d4da6b7fc277bf740090d75a5",
-      "0x1b7ad4a1a656bd5e2791a81da0a6ea6c09be224792b09e5e587d72df195e484d"
+    "domain_staking_manager": "StakeManager:BN254:PoP:v1:",
+    "domain_validator_manager": "ValidatorManager:BN254:PoP:v1:",
+    "proof": [
+      {
+        "message_hash_stake_manager": [
+          "0x2a5c9018d044257bdbcda80611d4563f5765fba079070c163fa59722c34510e2",
+          "0x08bbe39af602ca9cc3bffda2a1715de2c8aa9cdfc8a74ace7504b13853421fc4"
+        ],
+        "message_hash_validator_manager": [
+          "0x280f25274ddf9ad76785d1af9617e799bba7f3c15b725971f10604a2f84b373b",
+          "0x07dbd580cddcd3a3415e0902f2762ea83ec9d0efed588038fcb88e5be6d8e6f6"
+        ],
+        "proof_of_possession_stake_manager": [
+          "0x03c194509197e64104550ae82202a3f0a85bb4fa016df9c57e6acf63272c3396",
+          "0x236825cca9395d2cb3f66992aa7e05da8dfb2c65e2ce95a4e3711662d73f6858"
+        ],
+        "proof_of_possession_validator_manager": [
+          "0x108d5a63ac0a43d34c286e2a89b600a1b3134d9b536090c8ed041fc560f40d4e",
+          "0x0b6d539f3fa9d62e21834857ecd37e8fbd1c27255e50d0d32ce4250af7f1747a"
+        ],
+        "chain_id": "8453"
+      },
+      {
+        "message_hash_stake_manager": [
+          "0x21313d7fd6e1f5e7b9afe5866baed31f6bf2f303d16d380add2401014676d915",
+          "0x09e4044980bceccd47567a986ed7815e4c232896ec37ac607782c8f6f6757cc7"
+        ],
+        "message_hash_validator_manager": [
+          "0x0437b758798ac871b341b57369c304ecaa0851d47a6dae135b8c8f492458aa2d",
+          "0x03bc9fb42da99e5886a6824d18963a7ab6825ed0d73f55522e34462d8042c540"
+        ],
+        "proof_of_possession_stake_manager": [
+          "0x11305979b06e6d57344a72a5bbdf3a66cc3c427e3df014f77e7f9e9f4b9edc5b",
+          "0x00e8151343c5432b6ae9baf024544ad382c795a2660ed158d43a08d5a9e1c01f"
+        ],
+        "proof_of_possession_validator_manager": [
+          "0x24a8548aa156a8ec9b88cff489ac0e2e9d410c2c6b5214edb882ca1f36da8249",
+          "0x2599bc5cf4196b861cfa49c6bd0a25ba1cee31a64e0dd9e38fe9225c8ace3b73"
+        ],
+        "chain_id": "1"
+      }
     ]
   },
   {
-    "private_key": "0x093960108d2d900253a444aaa25edebe137b9b9be1715f92c7fe58f392845397",
+    "private_key": "0x0cf77e55e475b206b742eff2d20e7f65631a1f9b09475bcabccbb2c93427d7b6",
     "public_key": [
-      "0x1cee431c0b130c885a5ee0f0925e06eb872dd1a17a3e31b867366ad39aa2c8cc",
-      "0x015992ea719c623cc183a8ae6700335d78bf0cd380dee67bf618e53c46a23d94",
-      "0x19fed21a893fd6d6e6f5c0b56fefb38d815548a8f52108514c5e733651d0681c",
-      "0x12e797136a093037ee34202dc06cc839d91e4bf88149b8b20386d3d1a3cf8202"
-    ],
-    "proof_of_possession": [
-      "0x0c32dabe3978bdf201d067d761ade06c05953f13a0630f7b63b6d99809835b11",
-      "0x15d42dcebc7ff9c716e97f3cb9d76c3e5aed5597f16bac838c7eaa3c2d8569f9"
+      "0x0c81958a6f643f8e370be0698f45b22ff577a55e04fea6d67c6ea312c22ded57",
+      "0x27555e9f5e556394885d65efcf15827b647bfc062a0e4d1850a1be00f4df0de2",
+      "0x2cae46b6a9a45f1d6ea6fbc3ada6e6bb8ce437d666d5bd3c39803f0f959053f2",
+      "0x045e464154938e39c97f6e8a91e5eb19671ffb6c50c710a28622e2e403140ca2"
     ],
     "wallet_address": "0x52d4630789F63F9C715a2D30fCe65727D009f8d9",
-    "domain": "StakeManager:BN254:PoP:v1:",
-    "message_hash": [
-      "0x2c91e9542827c4ab34fb695471a6ddcf2a6c24a1c3b793c9164161ec37f5aabe",
-      "0x084b50e0e24502e04b647408429319ead27471a848c5cdbadca7ebd9d0a03700"
+    "domain_staking_manager": "StakeManager:BN254:PoP:v1:",
+    "domain_validator_manager": "ValidatorManager:BN254:PoP:v1:",
+    "proof": [
+      {
+        "message_hash_stake_manager": [
+          "0x2a7840cc99878feb64cd65ea52476c4fc5e485bfbb51c34dabf7eff9edbbcaf8",
+          "0x16847f1d21bec2a3edb8697da2c3ed5f23d97f7cbf9d0b4841fd0e61b180adda"
+        ],
+        "message_hash_validator_manager": [
+          "0x221e4d8daf8e9baf32b9562002a5f6dbec6bace9ee43cf918f9996a784fc9355",
+          "0x1b6a038d44fbc20074dac26aeef0fc61d4d370786f19946e0863ab2847c26d44"
+        ],
+        "proof_of_possession_stake_manager": [
+          "0x17269982006459accd6e9389a68e2e4c5355ff6da2405ee3c369abc2878ecd87",
+          "0x1a2b968389604ad751e854b14c7f2559c0597a8e40cd96a50be73893909186ae"
+        ],
+        "proof_of_possession_validator_manager": [
+          "0x1c47df09b25638ec9d0cfe3b62b43ae032af6fdf974a9da17b818c16f0e65df3",
+          "0x25741a58ed8f3f30f975e8cfb1816e89287942bfb2b4a6d35ce8ccded217f681"
+        ],
+        "chain_id": "8453"
+      },
+      {
+        "message_hash_stake_manager": [
+          "0x16844a610b603dd9f02d30583a04e1b2f270acda2e86cdd41b7383159acd4850",
+          "0x11ae2fe66c5433cbe95945fa6424f60cb3e0a6e32bff478d099e96ce693025f1"
+        ],
+        "message_hash_validator_manager": [
+          "0x2897342f25ca72a5c4b66bb6b3ceff9ea48140ae1a97e5238779cd9bca7f2c50",
+          "0x0a7cd02f99e2bfb10e2d4190ce9f06a0c63161fa2003746fc36ad3770b8fdf4a"
+        ],
+        "proof_of_possession_stake_manager": [
+          "0x19526cf848478ba0c9f47c457cba915e2b44799f00c8afe241f2a3cd20f81351",
+          "0x23f80233f031993f03872520c31e8968506f2cd29ea21b1619ce9bac906a09af"
+        ],
+        "proof_of_possession_validator_manager": [
+          "0x19990d2e8173ca44c27fc5046d0f94dbe14405cc177a4ebad557892620dd9fd6",
+          "0x1eb3eb7eaff4aa4f20f3d2156113cd1a6c29bbc9ae8ccdd0844f37e5f421ada5"
+        ],
+        "chain_id": "1"
+      }
     ]
   },
   {
-    "private_key": "0x15c5621c676b07f449aa43f575875557ab35f32fc99ab31c9917d7fcb2c08675",
+    "private_key": "0x1c33fb1dc54e38fde9490bce8f2edbc817dbfcf2ad08d0f3dc547d83111c4a3e",
     "public_key": [
-      "0x0e9b170329d93926040477acb0f0c12723446c17f9de5bf7836dce4ae1f39d4d",
-      "0x2c1328f472b0b10ff80a0bccf058caafd33a1c6cff112fc994a953e39d584960",
-      "0x22c83558fba4ec3ceb81dafd02206bfb353bf3711e9afa2513c4450918e6c4a3",
-      "0x09fc355d0473b43a3600abf1b6454fdaa5085c1395231f71c666abbe62f398e8"
+      "0x00f12c96a39b14f4241be907af78507daf6fc6e3adb729aeec4007002ed861d6",
+      "0x24cb2badd494fef1c1cd2f815950a8ca890e2a4d6c7d4cc32e114e5cd994d7f9",
+      "0x11b79244ccc3e8cd17578370218174a8af8eed5ccc29068062c4ed9240a2581e",
+      "0x0d1aa34549f03d3dfd115fd46d14c84f4bd462dfaa01caec2e8dd451cb77bf52"
     ],
-    "proof_of_possession": [
-      "0x0253d2721518b3e63b1f0e707966b0bc46432ee0d1660411b512fc150d424a5d",
-      "0x1cd90894473a44f2bdc15df819662b532d70c5528ed048fc482de7fdc31cb2d2"
-    ],
-    "wallet_address": "0x7c8999dC9a822c1f0Df42023113EDB4FDd543266",
-    "domain": "StakeManager:BN254:PoP:v1:",
-    "message_hash": [
-      "0x0a04fc0ae067e62d5071e4ff061e3b867d7d557fafcbf861c12811023f7b569b",
-      "0x1108cb8c37b4f9000fa47bdc9caa94379e3a0cefe44f2405a6815df0b67c6844"
+    "wallet_address": "0x5898751917a8482c6FEb4D20b6e6C7442716Fd96",
+    "domain_staking_manager": "StakeManager:BN254:PoP:v1:",
+    "domain_validator_manager": "ValidatorManager:BN254:PoP:v1:",
+    "proof": [
+      {
+        "message_hash_stake_manager": [
+          "0x15d3a45af7dfabf120cfff471ff83c90e01c750fa930f165b19bc4e0c4fe9f33",
+          "0x240b6a00495754dc20fbd8b375230a49bdb410ba574d4cb004c1d3c45eb5ab28"
+        ],
+        "message_hash_validator_manager": [
+          "0x0f451c8ac0071f1dfee1f1e087fbca07359e4679c518e20b8ab257655b008212",
+          "0x181d4adc520e4907ab219532ad1bdce1e11e306514c2f04c44c6bebd2f79e06a"
+        ],
+        "proof_of_possession_stake_manager": [
+          "0x1341694ac1eb69ce621f99b9f6fc039c93f8786d8cf5da0c556879eec3f4dbe7",
+          "0x0d6ab55e3ea01c1c0777035c56d7651ebe7a4df172917669642c221001c65712"
+        ],
+        "proof_of_possession_validator_manager": [
+          "0x2e43a215dbbdf00cf5d3996309dc3400f336c0d7d4898a5c5a6310d86c5d7860",
+          "0x13103c33ded96908692f47fd43924891736fb9fa7e2e877c33a569234ba3e4d1"
+        ],
+        "chain_id": "8453"
+      },
+      {
+        "message_hash_stake_manager": [
+          "0x0d6757b51cab38e6b8411ccacc719b089ab9545750b12925a16013b10c7cf01f",
+          "0x1fa99946c1b8d57ee057b734d544919deea1c25363c2079272ccf4dc01aedd0d"
+        ],
+        "message_hash_validator_manager": [
+          "0x04cc8701526e9fab1d20aefb2b0fe4441d5b75965ba5a7a2ead9783ffb758188",
+          "0x2e0111cc053a5eb5e21483f71d7400db13dde568acab3df0f614626cdb644808"
+        ],
+        "proof_of_possession_stake_manager": [
+          "0x0d575efed32964c1e49ee20843f4dd982caf601296f5325a565adb2fade6a38c",
+          "0x09f404e948a29ca4f315317dd686241b70640a2496fe1721280e0be051009e99"
+        ],
+        "proof_of_possession_validator_manager": [
+          "0x27c785f9e7748b32cda0b43aad46a0ee6f2f0168e43fc815eebbb71b65cdc3da",
+          "0x201165d0338bfe28904be2f3dee039024b73034d4c25f12696cf448507cf00ac"
+        ],
+        "chain_id": "1"
+      }
     ]
   }
 ]

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import "forge-std/Test.sol";
-import "../base/StakeManagerBase.t.sol";
+import {StakeManagerBaseTest} from "../base/StakeManagerBase.t.sol";
+import {IValidatorTypes} from "../../src/validator/IValidatorTypes.sol";
 
 contract StakeManagerFuzzTest is StakeManagerBaseTest {
     ///@dev I need to add more fuzz tests here

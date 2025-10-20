@@ -38,6 +38,8 @@ interface IValidatorTypes {
 
     error UnableToRemoveValidator();
 
+    error NotBaseChain(uint256 chainId);
+
     /// @notice Validator status enumeration
     /// @param Inactive Not staked or slashed below minimum
     /// @param Active Staked and eligible to submit attestations
@@ -61,11 +63,12 @@ interface IValidatorTypes {
     }
 
     /// @notice Parameters for root verification queries
-    /// @param chainId Source chain identifier
     /// @param bridgeRoot Bridge contract root to verify
     struct RootParams {
-        uint256 chainId;
+        uint256 blockNumber;
         bytes32 bridgeRoot;
+        bytes32 stateRoot;
+        uint256 chainId;
     }
 
     /// @notice Complete validator information
@@ -84,20 +87,21 @@ interface IValidatorTypes {
     }
 
     /// @notice Bridge state attestation submitted by validator
-    /// @param chainId Source chain identifier (e.g., 1 for Ethereum)
     /// @param blockNumber Block number where bridge state was captured
     /// @param bridgeRoot Root hash of bridge contract's state tree
     /// @param stateRoot State root of the blockchain at blockNumber
     /// @param timestamp Block timestamp when attestation was created
     /// @param validator Address of attesting validator
     /// @param signature BLS signature over attestation data
+    /// @param certificate The certificate issued by the node manager as proof the validator can submit
     struct BridgeAttestation {
-        uint256 chainId;
         uint256 blockNumber;
         bytes32 bridgeRoot;
         bytes32 stateRoot;
+        uint256 chainId;
         uint256 timestamp;
         address validator;
+        bytes certificate;
         uint256[2] signature;
     }
 
@@ -154,24 +158,57 @@ interface IValidatorTypes {
     /// @param attestations Mapping of validator to root hash to attestation status
     /// @param preConfirmations Mapping of root hashes to pre-confirmation data
     /// @param activeValidators Set of currently active validator addresses
+    /// @param certificateNonces stores all nonces for validator certificates
     /// @param __gap Storage gap for future upgrades
-    struct VMStorage {
+    struct VmStorage {
         mapping(address validator => ValidatorInfo info) validators;
-        mapping(address => mapping(bytes32 => bool)) attestations;
-        mapping(bytes32 => PreConfirmation) preConfirmations;
+        mapping(address validator => mapping(bytes32 => bool)) attestations;
+        mapping(bytes32 root => PreConfirmation) preConfirmations;
+        mapping(address validator => uint256 nonce) certificateNonces;
         EnumerableSet.AddressSet activeValidators;
         uint256[46] __gap;
     }
+
+    /// @notice Time-bound authorization certificate issued by node manager
+    /// @dev Proves validator eligibility on base chain at issuance time
+    /// @param validator Address of the validator being authorized
+    /// @param issuedAt Timestamp when certificate was issued
+    /// @param expiresAt Timestamp when certificate becomes invalid
+    /// @param chainId Target chain where certificate is valid
+    /// @param signature ECDSA signature from node manager over certificate data
+    struct Certificate {
+        address validator;
+        uint256 issuedAt;
+        uint256 expiresAt;
+        uint256 chainId;
+        bytes signature;
+    }
+
+    /// @notice Invalid certificate signer
+    /// @param signer Address that signed the certificate
+    /// @param expected Address of the authorized node manager
+    error InvalidCertificateSigner(address signer, address expected);
+
+    /// @notice Certificate not yet valid
+    /// @param currentTime Current block timestamp
+    /// @param validFrom Certificate's issuedAt timestamp
+    error CertificateNotYetValid(uint256 currentTime, uint256 validFrom);
+
+    /// @notice Certificate has expired
+    /// @param currentTime Current block timestamp
+    /// @param expiredAt Certificate's expiresAt timestamp
+    error CertificateExpired(uint256 currentTime, uint256 expiredAt);
+
+    /// @notice Certificate issued for wrong chain
+    /// @param certificateChain ChainId in certificate
+    /// @param currentChain Current block.chainid
+    error CertificateWrongChain(uint256 certificateChain, uint256 currentChain);
 
     /// @notice Emitted when a validator stakes tokens
     /// @param validator Address of new validator
     /// @param stakeAmount Amount staked
     /// @param blsPublicKey BLS public key registered
-    event ValidatorStaked(
-        address indexed validator,
-        uint256 stakeAmount,
-        bytes blsPublicKey
-    );
+    event ValidatorStaked(address indexed validator, uint256 stakeAmount, bytes blsPublicKey);
 
     /// @notice Emitted when validator submits bridge attestation
     /// @param validator Address of validator
@@ -179,21 +216,14 @@ interface IValidatorTypes {
     /// @param bridgeRoot Bridge root that was attested
     /// @param blockNumber Block number of attestation
     event AttestationSubmitted(
-        address indexed validator,
-        uint256 indexed chainId,
-        bytes32 bridgeRoot,
-        uint256 blockNumber
+        address indexed validator, uint256 indexed chainId, bytes32 bridgeRoot, uint256 blockNumber
     );
 
     /// @notice Emitted when bridge root is verified by SP1 system
     /// @param chainId Source chain identifier
     /// @param bridgeRoot Bridge root that was verified
     /// @param blockNumber Block number verified
-    event RootVerified(
-        uint256 indexed chainId,
-        bytes32 indexed bridgeRoot,
-        uint256 blockNumber
-    );
+    event RootVerified(uint256 indexed chainId, bytes32 indexed bridgeRoot, uint256 blockNumber);
 
     /// @notice Emitted when a new validator is added to the active set
     /// @param wallet Validator's wallet address used for rewards
@@ -214,8 +244,7 @@ interface IValidatorTypes {
     /// @param currentStakingManager Currently set manageraddress
     /// @param newStakingManager New manager address
     event UpdatedStakingManager(
-        address indexed currentStakingManager,
-        address indexed newStakingManager
+        address indexed currentStakingManager, address indexed newStakingManager
     );
 
     /// @notice emitted when bridge roots have been verified
@@ -227,9 +256,5 @@ interface IValidatorTypes {
     /// @param minimumStake New minimum stake requirement
     /// @param slashingRate New slashing rate percentage
     /// @param unstakingDelay New unstaking delay in seconds
-    event ParametersUpdated(
-        uint256 minimumStake,
-        uint256 slashingRate,
-        uint256 unstakingDelay
-    );
+    event ParametersUpdated(uint256 minimumStake, uint256 slashingRate, uint256 unstakingDelay);
 }

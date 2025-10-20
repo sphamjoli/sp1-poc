@@ -56,8 +56,8 @@ interface IValidatorManager is IValidatorTypes {
     function finaliseAttestations(VerificationParams calldata params) external;
 
     /// @notice Check if bridge root has been verified by SP1 system
-    /// @param params Root verification parameters - see {IValidatorTypes.RootParams}
-    /// @return verified True if root has passed SP1 verification
+    /// @param params The bridge root details to check
+    /// @return verified True if root has passed preconfirmation checks
     function isRootVerified(RootParams calldata params) external view returns (bool verified);
 
     /// @notice Get validator information
@@ -81,12 +81,8 @@ interface IValidatorManager is IValidatorTypes {
 
     /// @notice Hash proof of possession message to curve point
     /// @param blsPubkey The BLS public key to prove possession of
-    /// @param attestation signed bridge attestation - see {IValidatorTypes.AggregatedBridgeAttestation}
     /// @return The message hashed to a curve point for BLS verification
-    function proofOfPossessionMessage(
-        uint256[4] memory blsPubkey,
-        BridgeAttestation calldata attestation
-    )
+    function proofOfPossessionMessage(uint256[4] memory blsPubkey)
         external
         view
         returns (uint256[2] memory);

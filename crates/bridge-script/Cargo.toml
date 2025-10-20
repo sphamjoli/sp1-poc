@@ -15,24 +15,19 @@ name = "evm"
 path = "src/bin/evm.rs"
 
 [dependencies]
-sp1-sdk = { workspace = true, default-features = false }
-alloy-sol-types = { workspace = true, default-features = false }
-alloy-primitives = { workspace = true, default-features = false }
-alloy-sol-macro = { workspace = true, default-features = false }
-serde = { workspace = true, features = ["derive"], default-features = false }
-serde_json = { workspace = true, default-features = false }
+sp1-sdk = { workspace = true }
+alloy = { workspace = true, features = ["full"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 clap = { workspace = true }
-dotenv = { workspace = true, default-features = false }
-hex = { workspace = true, default-features = false }
-eyre = { workspace = true, default-features = false }
+dotenv = { workspace = true }
+hex = { workspace = true }
+eyre = { workspace = true }
 tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
 futures = { workspace = true }
 gql_client = { workspace = true }
-mongodb = { workspace = true, default-features = false, features = [
-  "rustls-tls",
-  "compat-3-0-0",
-] }
+mongodb = { workspace = true, features = ["rustls-tls", "compat-3-0-0"] }
 
-recall_merkle_tree_rs = { workspace = true, default-features = false }
+recall_merkle_tree_rs = { workspace = true }
 [build-dependencies]
 sp1-build = { workspace = true }

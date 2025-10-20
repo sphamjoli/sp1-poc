@@ -1,7 +1,5 @@
 # Bridge Architecture Overview (WIP)
 
-## Overview
-
 This proof-of-concept cross-chain bridge combines SP1’s **Groth16 zero-knowledge proof** system for periodic settlement with a validator-based pre-confirmation layer. The design supports near-instant asset transfers across EVM-compatible networks while preserving trustless security guarantees. It embraces design trade-offs and known limitations in favor of experimentation and learning.
 
 

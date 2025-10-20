@@ -1,6 +1,3 @@
-pub mod api;
-pub use api::*;
-
 fn main() {
     println!("Hello, world!");
 }

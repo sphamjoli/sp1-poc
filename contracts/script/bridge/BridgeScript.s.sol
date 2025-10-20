@@ -2,8 +2,6 @@
 pragma solidity ^0.8.30;
 
 import {Script, console} from "forge-std/Script.sol";
-import {stdJson} from "forge-std/StdJson.sol";
-import {SP1VerifierGateway} from "@sp1-contracts/SP1VerifierGateway.sol";
 import {BridgeToken} from "../../src/test/BridgeToken.sol";
 import {Bridge} from "../../src/bridge/Bridge.sol";
 import {IBridgeTypes} from "../../src/bridge/BridgeTypes.sol";

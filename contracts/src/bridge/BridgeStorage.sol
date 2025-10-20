@@ -2,7 +2,7 @@
 pragma solidity ^0.8.30;
 
 import {IBridgeTypes} from "./BridgeTypes.sol";
-import "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
+import {SparseMerkleTree} from "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
 import {LocalExitTreeLib, SparseMerkleTree} from "../libs/LocalExitTreeLib.sol";
 
 /// @title BridgeStorage
@@ -151,7 +151,14 @@ abstract contract BridgeStorage is IBridgeTypes {
         view
         returns (bool isClaimed)
     {
-        bytes32 claimKey = keccak256(abi.encodePacked(sourceChain, depositIndex));
+        bytes32 claimKey;
+        assembly {
+            let pointer := mload(0x40)
+            mstore(add(pointer, 0x20), sourceChain)
+            mstore(add(pointer, 0x40), depositIndex)
+            claimKey := keccak256(pointer, 0x60)
+            mstore(0x40, add(pointer, 0x60))
+        }
         Storage storage $ = loadStorage();
         return $.claimed[claimKey];
     }
@@ -161,7 +168,15 @@ abstract contract BridgeStorage is IBridgeTypes {
     /// @param depositIndex Deposit index
     /// @dev Only callable by bridge contract
     function markDepositClaimed(uint256 sourceChain, uint256 depositIndex) internal onlyBridge {
-        bytes32 claimKey = keccak256(abi.encodePacked(sourceChain, depositIndex));
+        bytes32 claimKey;
+
+        assembly {
+            let pointer := mload(0x40)
+            mstore(add(pointer, 0x20), sourceChain)
+            mstore(add(pointer, 0x40), depositIndex)
+            mstore(add(pointer, 0x60), chainid())
+            mstore(0x60, add(pointer, 0x60))
+        }
         Storage storage $ = loadStorage();
         $.claimed[claimKey] = true;
     }

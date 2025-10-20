@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import "@openzeppelin/contracts/utils/math/Math.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {
@@ -139,7 +139,7 @@ contract StakeManager is
         nonReentrant
     {
         uint256[2] memory msgToVerify = proofOfPossessionMessage(proof.pubkey);
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
         ValidatorBalance storage validator = $.balances[msg.sender];
 
         bytes32 currentStakeVersion = getStakeVersion(ACTIVE_STAKING_CONFIG);
@@ -166,7 +166,7 @@ contract StakeManager is
 
         if (validator.tokenId == 0) {
             validator.pubkey = proof.pubkey;
-            _mintValidatorNFT(msg.sender, proof.pubkey);
+            _mintValidatorNft(msg.sender, proof.pubkey);
         }
         IValidatorTypes.ValidatorInfo memory info =
             IValidatorManager(VALIDATOR_MANAGER).getValidator(msg.sender);
@@ -207,7 +207,7 @@ contract StakeManager is
         require(received > 0, NotReservesRecieved());
 
         // credit rewards budget for this token
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
         $.rewardReserves[token] += received;
 
         emit RewardTopUp(token, received, msg.sender);
@@ -215,7 +215,7 @@ contract StakeManager is
 
     /// @inheritdoc IStakeManager
     function sweepExcess(address token, uint256 amount) external onlyOwner nonReentrant {
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
 
         uint256 required = $.rewardReserves[token];
         require(required > amount, NoAccessReserves());
@@ -261,25 +261,25 @@ contract StakeManager is
         public
         pure
         override
-        returns (bytes32)
+        returns (bytes32 version)
     {
-        return keccak256(
-            abi.encode(
-                config.minStakeAmount,
-                config.minWithdrawAmount,
-                config.minUnstakeDelay,
-                config.correctProofReward,
-                config.incorrectProofPenalty,
-                config.maxMissedProofs,
-                config.slashingRate,
-                config.stakingToken
-            )
-        );
+        assembly {
+            let pointer := mload(0x40)
+            mstore(pointer, mload(config))
+            // @dev we use 8 here since we need to keep space for
+            // storing the results of keccak256
+            let length := mul(0x20, 8)
+            for { let i := 0 } lt(i, length) { i := add(i, 0x20) } {
+                mstore(add(pointer, i), mload(add(config, i)))
+            }
+            version := keccak256(pointer, length)
+            mstore(0x40, add(pointer, length))
+        }
     }
 
     /// @inheritdoc IStakeManager
     function beginUnstaking(UnstakingParams memory params) external override {
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
         ValidatorBalance storage validator = $.balances[msg.sender];
         StakeManagerConfig memory config = $.stakingManagerVersions[validator.stakeVersion];
         IValidatorTypes.ValidatorInfo memory info =
@@ -329,7 +329,7 @@ contract StakeManager is
 
     /// @inheritdoc IStakeManager
     function completeUnstaking() external override nonReentrant {
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
         ValidatorBalance storage validator = $.balances[msg.sender];
         StakeManagerConfig memory config = $.stakingManagerVersions[validator.stakeVersion];
         require(validator.stakeExitTimestamp > 0, NotAllowed());
@@ -361,7 +361,7 @@ contract StakeManager is
     function upgradeStakeConfig(StakeManagerConfig memory config) public override onlyOwner {
         emit StakeManagerConfigUpdated(ACTIVE_STAKING_CONFIG, config);
         ACTIVE_STAKING_CONFIG = config;
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
         $.stakingManagerVersions[getStakeVersion(ACTIVE_STAKING_CONFIG)] = config;
     }
 
@@ -369,7 +369,7 @@ contract StakeManager is
     function slashValidator(SlashParams calldata params) external override onlyValidatorManager {
         require(params.slashAmount > 0, ZeroSlashAmount());
 
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
         ValidatorBalance storage validator = $.balances[params.validator];
         StakeManagerConfig memory config = $.stakingManagerVersions[validator.stakeVersion];
         require(config.minStakeAmount > 0, InvalidStakeVersion());
@@ -389,10 +389,7 @@ contract StakeManager is
 
         // Strict threshold: if remaining stake is >0 but below min, jail (set Inactive) until top-up.
         // Theres probz a better design but we keeping it simple here
-        if (
-            validator.stakeAmount > 0
-                && validator.stakeAmount < ACTIVE_STAKING_CONFIG.minStakeAmount
-        ) {
+        if (validator.stakeAmount < ACTIVE_STAKING_CONFIG.minStakeAmount) {
             IValidatorManager(VALIDATOR_MANAGER).updateValidatorStatus(
                 params.validator, IValidatorTypes.ValidatorStatus.Inactive
             );
@@ -432,7 +429,7 @@ contract StakeManager is
 
     /// @inheritdoc IStakeManager
     function claimRewards() external override nonReentrant {
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
         ValidatorBalance storage validator = $.balances[msg.sender];
         address stakingToken = $.stakingManagerVersions[validator.stakeVersion].stakingToken;
         require(validator.balance > 0, NoRewardsToClaim());
@@ -449,7 +446,7 @@ contract StakeManager is
 
     /// @inheritdoc IStakeManager
     function getLatestRewards(address validator) external view override returns (uint256) {
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
         return $.balances[validator].balance;
     }
 
@@ -459,7 +456,7 @@ contract StakeManager is
         view
         returns (ValidatorBalance memory info)
     {
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
         info = $.balances[validator];
     }
 
@@ -495,9 +492,9 @@ contract StakeManager is
     /// @notice Mint NFT and register new validator
     /// @param validator Address of the validator
     /// @param pubkey BLS public key of the validator
-    function _mintValidatorNFT(address validator, uint256[4] memory pubkey) internal {
+    function _mintValidatorNft(address validator, uint256[4] memory pubkey) internal {
         uint256 tokenId = COUNTER++;
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
         $.balances[validator].tokenId = tokenId;
         _mint(validator, tokenId);
         IValidatorTypes.ValidatorInfo memory info = IValidatorTypes.ValidatorInfo({
@@ -581,7 +578,7 @@ contract StakeManager is
     /// @notice Calculate total reward pool for current epoch
     /// @return rewardPool Total rewards available for distribution
     function _calculateEpochRewardPool() internal view returns (uint256 rewardPool) {
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
         IValidatorManager manager = IValidatorManager(VALIDATOR_MANAGER);
         address[] memory activeValidators = manager.getActiveValidators();
 
@@ -619,7 +616,7 @@ contract StakeManager is
         view
         returns (uint256 totalPoints)
     {
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
 
         for (uint256 i = 0; i < validators.length; i++) {
             uint256 correctAttestations = validators[i].attestationCount
@@ -646,7 +643,7 @@ contract StakeManager is
         internal
         returns (uint256 distributedTotal)
     {
-        SMStorage storage $ = _loadStorage();
+        SmStorage storage $ = _loadStorage();
 
         uint256 totalPoints = 0;
         bool[] memory eligible = new bool[](validators.length);

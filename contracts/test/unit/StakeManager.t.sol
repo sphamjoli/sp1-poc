@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import "forge-std/Test.sol";
-import "../base/StakeManagerBase.t.sol";
+import {StakeManagerBaseTest, IValidatorTypes, BLS, console} from "../base/StakeManagerBase.t.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract StakeManagerTest is StakeManagerBaseTest {
-    function test_blsTestDataIsValid() public view {
-        assertTrue(blsTestData.length >= 2, "Need at least 2 BLS test cases");
-
+    function test_blsTestDataIsValid() public {
+        vm.selectFork(FORKA_ID);
         BlsTestData memory aliceData = validatorBlsData[alice];
+        ProofData memory proofData = validatorProofData[alice][block.chainid];
+
         assertTrue(bytes(aliceData.walletAddress).length > 0, "Alice BLS data not found");
 
         uint256[4] memory pubkey = [
@@ -19,14 +20,17 @@ contract StakeManagerTest is StakeManagerBaseTest {
         ];
 
         uint256[2] memory signature = [
-            vm.parseUint(aliceData.proofOfPossession[0]),
-            vm.parseUint(aliceData.proofOfPossession[1])
+            vm.parseUint(proofData.proofOfPossessionStake[0]),
+            vm.parseUint(proofData.proofOfPossessionStake[1])
         ];
 
-        uint256[2] memory messageHash =
-            [vm.parseUint(aliceData.messageHash[0]), vm.parseUint(aliceData.messageHash[1])];
+        uint256[2] memory messageHashStake = [
+            vm.parseUint(proofData.messageHashStake[0]),
+            vm.parseUint(proofData.messageHashStake[1])
+        ];
 
-        (bool pairingSuccess, bool callSuccess) = BLS.verifySingle(signature, pubkey, messageHash);
+        (bool pairingSuccess, bool callSuccess) =
+            BLS.verifySingle(signature, pubkey, messageHashStake);
         assertTrue(pairingSuccess && callSuccess, "BLS signature verification failed for Alice");
     }
 
@@ -58,19 +62,21 @@ contract StakeManagerTest is StakeManagerBaseTest {
         stakeManagerA.pause();
         vm.stopPrank();
 
-        BlsTestData memory data = validatorBlsData[alice];
+        BlsTestData memory aliceData = validatorBlsData[alice];
+        ProofData memory proofData = validatorProofData[alice][block.chainid];
         vm.startPrank(alice);
-        vm.selectFork(FORKA_ID);
         TOKEN_CHAINA.approve(address(stakeManagerA), 200 ether);
 
         uint256[4] memory pubkey = [
-            vm.parseUint(data.publicKey[0]),
-            vm.parseUint(data.publicKey[1]),
-            vm.parseUint(data.publicKey[2]),
-            vm.parseUint(data.publicKey[3])
+            vm.parseUint(aliceData.publicKey[0]),
+            vm.parseUint(aliceData.publicKey[1]),
+            vm.parseUint(aliceData.publicKey[2]),
+            vm.parseUint(aliceData.publicKey[3])
         ];
-        uint256[2] memory signature =
-            [vm.parseUint(data.proofOfPossession[0]), vm.parseUint(data.proofOfPossession[1])];
+        uint256[2] memory signature = [
+            vm.parseUint(proofData.proofOfPossessionStake[0]),
+            vm.parseUint(proofData.proofOfPossessionStake[1])
+        ];
 
         StakeParams memory params =
             StakeParams({stakeAmount: 200 ether, stakeVersion: testConfigVersionA});
@@ -82,19 +88,24 @@ contract StakeManagerTest is StakeManagerBaseTest {
     }
 
     function test_stakeRevertsInvalidStakeVersion() public {
-        BlsTestData memory data = validatorBlsData[alice];
-        vm.startPrank(alice);
         vm.selectFork(FORKA_ID);
+
+        BlsTestData memory aliceData = validatorBlsData[alice];
+        ProofData memory proofData = validatorProofData[alice][block.chainid];
+
+        vm.startPrank(alice);
         TOKEN_CHAINA.approve(address(stakeManagerA), 200 ether);
 
         uint256[4] memory pubkey = [
-            vm.parseUint(data.publicKey[0]),
-            vm.parseUint(data.publicKey[1]),
-            vm.parseUint(data.publicKey[2]),
-            vm.parseUint(data.publicKey[3])
+            vm.parseUint(aliceData.publicKey[0]),
+            vm.parseUint(aliceData.publicKey[1]),
+            vm.parseUint(aliceData.publicKey[2]),
+            vm.parseUint(aliceData.publicKey[3])
         ];
-        uint256[2] memory signature =
-            [vm.parseUint(data.proofOfPossession[0]), vm.parseUint(data.proofOfPossession[1])];
+        uint256[2] memory signature = [
+            vm.parseUint(proofData.proofOfPossessionStake[0]),
+            vm.parseUint(proofData.proofOfPossessionStake[1])
+        ];
 
         StakeParams memory params =
             StakeParams({stakeAmount: 200 ether, stakeVersion: keccak256("invalid")});
@@ -106,8 +117,9 @@ contract StakeManagerTest is StakeManagerBaseTest {
     }
 
     function test_stakeRevertsInsufficientAmount() public {
-        BlsTestData memory data = validatorBlsData[alice];
         vm.selectFork(FORKA_ID);
+        BlsTestData memory data = validatorBlsData[alice];
+        ProofData memory proofData = validatorProofData[alice][block.chainid];
         vm.startPrank(alice);
         TOKEN_CHAINA.approve(address(stakeManagerA), 50 ether);
 
@@ -117,8 +129,10 @@ contract StakeManagerTest is StakeManagerBaseTest {
             vm.parseUint(data.publicKey[2]),
             vm.parseUint(data.publicKey[3])
         ];
-        uint256[2] memory signature =
-            [vm.parseUint(data.proofOfPossession[0]), vm.parseUint(data.proofOfPossession[1])];
+        uint256[2] memory signature = [
+            vm.parseUint(proofData.proofOfPossessionStake[0]),
+            vm.parseUint(proofData.proofOfPossessionStake[1])
+        ];
 
         StakeParams memory params =
             StakeParams({stakeAmount: 50 ether, stakeVersion: testConfigVersionA});
@@ -130,8 +144,9 @@ contract StakeManagerTest is StakeManagerBaseTest {
     }
 
     function test_stakeRevertsInsufficientAllowance() public {
-        BlsTestData memory data = validatorBlsData[alice];
         vm.selectFork(FORKA_ID);
+        BlsTestData memory data = validatorBlsData[alice];
+        ProofData memory proofData = validatorProofData[alice][block.chainid];
         vm.startPrank(alice);
         TOKEN_CHAINA.approve(address(stakeManagerA), 100 ether);
 
@@ -141,8 +156,10 @@ contract StakeManagerTest is StakeManagerBaseTest {
             vm.parseUint(data.publicKey[2]),
             vm.parseUint(data.publicKey[3])
         ];
-        uint256[2] memory signature =
-            [vm.parseUint(data.proofOfPossession[0]), vm.parseUint(data.proofOfPossession[1])];
+        uint256[2] memory signature = [
+            vm.parseUint(proofData.proofOfPossessionStake[0]),
+            vm.parseUint(proofData.proofOfPossessionStake[1])
+        ];
 
         StakeParams memory params =
             StakeParams({stakeAmount: 200 ether, stakeVersion: testConfigVersionA});
@@ -164,7 +181,9 @@ contract StakeManagerTest is StakeManagerBaseTest {
         _stakeAsUser(alice, 200 ether, FORKA_ID);
         ValidatorBalance memory beforeB = stakeManagerA.validatorBalance(alice);
 
+        vm.selectFork(FORKA_ID);
         BlsTestData memory data = validatorBlsData[alice];
+        ProofData memory proofData = validatorProofData[alice][block.chainid];
         vm.startPrank(alice);
         TOKEN_CHAINA.approve(address(stakeManagerA), 100 ether);
         uint256[4] memory pubkey = [
@@ -173,8 +192,10 @@ contract StakeManagerTest is StakeManagerBaseTest {
             vm.parseUint(data.publicKey[2]),
             vm.parseUint(data.publicKey[3])
         ];
-        uint256[2] memory signature =
-            [vm.parseUint(data.proofOfPossession[0]), vm.parseUint(data.proofOfPossession[1])];
+        uint256[2] memory signature = [
+            vm.parseUint(proofData.proofOfPossessionStake[0]),
+            vm.parseUint(proofData.proofOfPossessionStake[1])
+        ];
 
         StakeParams memory params =
             StakeParams({stakeAmount: 100 ether, stakeVersion: testConfigVersionA});
@@ -490,7 +511,9 @@ contract StakeManagerTest is StakeManagerBaseTest {
         _prankOwnerOnChain(FORKA_ID);
         stakeManagerA.upgradeStakeConfig(newConfig);
         testConfigVersionA = stakeManagerA.getStakeVersion(newConfig);
+        vm.selectFork(FORKA_ID);
         BlsTestData memory data = validatorBlsData[alice];
+        ProofData memory proofData = validatorProofData[alice][block.chainid];
         vm.startPrank(alice);
         TOKEN_CHAINA.approve(address(stakeManagerA), 200 ether);
 
@@ -501,8 +524,10 @@ contract StakeManagerTest is StakeManagerBaseTest {
             vm.parseUint(data.publicKey[3])
         ];
 
-        uint256[2] memory signature =
-            [vm.parseUint(data.proofOfPossession[0]), vm.parseUint(data.proofOfPossession[1])];
+        uint256[2] memory signature = [
+            vm.parseUint(proofData.proofOfPossessionStake[0]),
+            vm.parseUint(proofData.proofOfPossessionStake[1])
+        ];
         StakeParams memory params =
             StakeParams({stakeAmount: 200 ether, stakeVersion: testConfigVersionA});
         BlsOwnerShip memory proof = BlsOwnerShip({signature: signature, pubkey: pubkey});
@@ -515,6 +540,7 @@ contract StakeManagerTest is StakeManagerBaseTest {
         stakeManagerA.pause();
 
         BlsTestData memory data = validatorBlsData[alice];
+        ProofData memory proofData = validatorProofData[alice][block.chainid];
 
         vm.startPrank(spha);
         TOKEN_CHAINA.approve(address(stakeManagerA), 200 ether);
@@ -525,8 +551,10 @@ contract StakeManagerTest is StakeManagerBaseTest {
             vm.parseUint(data.publicKey[2]),
             vm.parseUint(data.publicKey[3])
         ];
-        uint256[2] memory signature =
-            [vm.parseUint(data.proofOfPossession[0]), vm.parseUint(data.proofOfPossession[1])];
+        uint256[2] memory signature = [
+            vm.parseUint(proofData.proofOfPossessionStake[0]),
+            vm.parseUint(proofData.proofOfPossessionStake[1])
+        ];
 
         StakeParams memory params =
             StakeParams({stakeAmount: 200 ether, stakeVersion: testConfigVersionA});
@@ -595,6 +623,7 @@ contract StakeManagerTest is StakeManagerBaseTest {
         stakeManagerA.approve(address(this), 1);
 
         vm.expectRevert(NotAllowed.selector);
+        /// forge-lint: disable-next-line(erc20-unchecked-transfer)
         stakeManagerA.transferFrom(alice, address(this), 1);
 
         vm.expectRevert(NotAllowed.selector);
@@ -690,21 +719,22 @@ contract StakeManagerTest is StakeManagerBaseTest {
     }
 
     function test_stakeRevertsBlsSignatureReuse() public {
-        BlsTestData memory aliceData = validatorBlsData[alice];
+        BlsTestData memory data = validatorBlsData[alice];
+        ProofData memory proofData = validatorProofData[alice][block.chainid];
         _stakeAsUser(alice, 200 ether, FORKA_ID);
 
         vm.startPrank(bob);
         TOKEN_CHAINA.approve(address(stakeManagerA), 200 ether);
 
         uint256[4] memory pubkey = [
-            vm.parseUint(aliceData.publicKey[0]),
-            vm.parseUint(aliceData.publicKey[1]),
-            vm.parseUint(aliceData.publicKey[2]),
-            vm.parseUint(aliceData.publicKey[3])
+            vm.parseUint(data.publicKey[0]),
+            vm.parseUint(data.publicKey[1]),
+            vm.parseUint(data.publicKey[2]),
+            vm.parseUint(data.publicKey[3])
         ];
         uint256[2] memory signature = [
-            vm.parseUint(aliceData.proofOfPossession[0]),
-            vm.parseUint(aliceData.proofOfPossession[1])
+            vm.parseUint(proofData.proofOfPossessionStake[0]),
+            vm.parseUint(proofData.proofOfPossessionStake[1])
         ];
 
         StakeParams memory params =
@@ -720,7 +750,10 @@ contract StakeManagerTest is StakeManagerBaseTest {
         _stakeAsUser(alice, 200 ether, FORKA_ID);
 
         _prankOwnerOnChain(FORKA_ID);
-        TOKEN_CHAINA.transfer(address(stakeManagerA), 100 ether);
+        require(
+            TOKEN_CHAINA.transfer(address(stakeManagerA), 100 ether),
+            "test_sweepExcessRevertsAccessingReserves:TransferFailed"
+        );
         stakeManagerA.transferToken(address(TOKEN_CHAINA), 110 ether);
 
         uint256 contractBalance = TOKEN_CHAINA.balanceOf(address(stakeManagerA));
@@ -791,6 +824,8 @@ contract StakeManagerTest is StakeManagerBaseTest {
         assertEq(uint256(info.status), uint256(IValidatorTypes.ValidatorStatus.Inactive));
 
         BlsTestData memory data = validatorBlsData[alice];
+        ProofData memory proofData = validatorProofData[alice][block.chainid];
+
         vm.startPrank(alice);
         TOKEN_CHAINA.approve(address(stakeManagerA), 200 ether);
 
@@ -800,8 +835,10 @@ contract StakeManagerTest is StakeManagerBaseTest {
             vm.parseUint(data.publicKey[2]),
             vm.parseUint(data.publicKey[3])
         ];
-        uint256[2] memory signature =
-            [vm.parseUint(data.proofOfPossession[0]), vm.parseUint(data.proofOfPossession[1])];
+        uint256[2] memory signature = [
+            vm.parseUint(proofData.proofOfPossessionStake[0]),
+            vm.parseUint(proofData.proofOfPossessionStake[1])
+        ];
 
         StakeParams memory params =
             StakeParams({stakeAmount: 200 ether, stakeVersion: testConfigVersionA});

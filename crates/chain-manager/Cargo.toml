@@ -7,6 +7,30 @@ exclude.workspace = true
 version.workspace = true
 
 [dependencies]
+jsonrpsee = { workspace = true, features = ["full"] }
+alloy = { workspace = true, features = [
+  "eips",
+  "full",
+  "json-rpc",
+  "node-bindings",
+  "rpc-client",
+  "rpc-types-debug",
+  "rpc-types-trace",
+  "signer-aws",
+  "signer-gcp",
+  "signer-keystore",
+  "signer-ledger",
+  "signer-mnemonic",
+  "signer-trezor",
+  "signer-yubihsm",
+] }
+thiserror = { workspace = true }
+eyre = { workspace = true }
+jsonrpsee-core = { workspace = true }
+dashmap = { workspace = true }
+serial_test = { workspace = true }
 
 [lints]
 workspace = true
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

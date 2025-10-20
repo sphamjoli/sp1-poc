@@ -1,5 +1,5 @@
 [package]
-name = "bls-keygen"
+name = "bls-test-utils"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
@@ -14,8 +14,7 @@ ark-serialize = { workspace = true }
 ark-std = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-alloy-primitives = { workspace = true }
-alloy-sol-types = { workspace = true }
+alloy = { workspace = true, features = ["full"] }
 hex = { workspace = true }
 sylow = { workspace = true }
 crypto-bigint = { workspace = true }

@@ -82,6 +82,8 @@ interface IBridgeTypes {
         address to;
         uint256 amount;
         bytes32 sourceRoot;
+        uint256 blockNumber;
+        bytes32 stateRoot;
         SparseMerkleTree.Proof proof;
     }
 
