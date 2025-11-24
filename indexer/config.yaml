@@ -20,14 +20,14 @@ networks:
   - id: 1 # Ethereum Mainnet
     rpc_config:
       url: http://host.docker.internal:8545
-    start_block: 22985155
+    start_block: 23815587
     contracts:
       - name: Bridge
-        address: "0x3860B063928436F548c3A58A40c4d1d171E78838"
+        address: "0xF1a7a5060f22edA40b1A94a858995fa2bcf5E75A"
   - id: 8453 # Base Mainnet
     rpc_config:
       url: http://host.docker.internal:8546
-    start_block: 33262239
+    start_block: 38276600
     contracts:
       - name: Bridge
-        address: "0xa0895076F3bDC96b9f7be96c3e3Fc07F11E128d7"
+        address: "0xCfecDD44270Fa180d9EC79d7A56f1A8bC9363Ee8"

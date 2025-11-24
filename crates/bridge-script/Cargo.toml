@@ -8,15 +8,25 @@ version.workspace = true
 
 [[bin]]
 name = "bridge"
-path = "src/bin/main.rs"
+path = "src/main.rs"
 
 [[bin]]
 name = "evm"
 path = "src/bin/evm.rs"
 
 [dependencies]
+chain-manager = { workspace = true }
 sp1-sdk = { workspace = true }
 alloy = { workspace = true, features = ["full"] }
+alloy-sol-types = { workspace = true }
+alloy-primitives = { workspace = true }
+alloy-consensus = { workspace = true }
+alloy-provider = { workspace = true }
+alloy-rpc-types = { workspace = true }
+alloy-network = { workspace = true }
+alloy-node-bindings = { workspace = true }
+alloy-signer = { workspace = true }
+alloy-signer-local = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 clap = { workspace = true }
@@ -27,7 +37,8 @@ tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
 futures = { workspace = true }
 gql_client = { workspace = true }
 mongodb = { workspace = true, features = ["rustls-tls", "compat-3-0-0"] }
+bloomfilter = { workspace = true }
+sha3 = { workspace = true }
 
-recall_merkle_tree_rs = { workspace = true }
 [build-dependencies]
 sp1-build = { workspace = true }

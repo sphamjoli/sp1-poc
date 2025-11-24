@@ -1,13 +1,12 @@
 [workspace]
 members = [
-  "crates/bridge-lib",
   "crates/bridge-program",
   "crates/bridge-script",
   "crates/bridge-validator-evm",
   "crates/bls-test-utils",
   "crates/node-manager",
-  "crates/chain-manager",
   "crates/validator-utils",
+  "crates/chain-manager",
 ]
 resolver = "2"
 
@@ -33,20 +32,40 @@ thiserror = { version = "2.0.12" }
 futures = { version = "0.3.31" }
 recall_merkle_tree_rs = { version = "0.1.0" }
 
+# Alloy dependencies
+alloy = { version = "1.0.36", features = ["full", "node-bindings"] }
+alloy-primitives = { version = "1.4.1" }
+alloy-sol-types = { version = "1.4.1" }
+alloy-consensus = { version = "1.1.2" }
+alloy-provider = { version = "1.1.2" }
+alloy-rpc-types = { version = "1.1.2" }
+alloy-network = { version = "1.1.2" }
+alloy-node-bindings = { version = "1.1.2" }
+alloy-signer = { version = "1.1.2" }
+alloy-signer-local = { version = "1.1.2" }
+alloy-rlp = { version = "0.3.12" }
+
+# local crates
+chain-manager = { path = "crates/chain-manager" }
+bridge-script = { path = "crates/bridge-script" }
+bridge-validator-evm = { path = "crates/bridge-validator-evm" }
+bls-test-utils = { path = "crates/bls-test-utils" }
+validator-utils = { path = "crates/validator-utils" }
+
+
 # Database dependencies
 mongodb = { version = "3.2.4", features = [
   "sync",
   "rustls-tls",
   "compat-3-0-0",
 ] }
+bloomfilter = { version = "3.0.1" }
 
 # SP1 dependencies
 sp1-sdk = { version = "5.0.0" }
 sp1-zkvm = { version = "5.0.0" }
 sp1-build = { version = "5.0.0" }
 
-# Alloy dependencies
-alloy = { version = "1.0.36", features = ["full", "node-bindings"] }
 
 # misc
 clap = { version = "4.5.41", features = ["derive", "env"] }
@@ -63,11 +82,8 @@ sha2 = { version = "0.11.0-pre.4" }
 crypto-bigint = { version = "0.6.1" }
 dashmap = { version = "6.1.0" }
 serial_test = { version = "3.2.0" }
+once_cell = { version = "1.21.3" }
 
-# crates
-bridge-lib = { path = "crates/bridge-lib" }
-bridge-program = { path = "crates/bridge-program" }
-bridge-script = { path = "crates/bridge-script" }
 jsonrpsee = { version = "0.26.0", features = ["full"] }
 jsonrpsee-core = { version = "0.26.0" }
 async-trait = { version = "0.1.88" }

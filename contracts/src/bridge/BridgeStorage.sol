@@ -24,9 +24,9 @@ abstract contract BridgeStorage is IBridgeTypes {
         bytes32(uint256(keccak256(abi.encodePacked("com.bridge.storage"))) - 1);
 
     /// @dev The bridge contract address
-    address public immutable BRIDGE;
+    address public  BRIDGE;
     /// @dev SparseTree Max Depth ideally 32
-    uint32 public immutable MAX_DEPTH;
+    uint32 public  MAX_DEPTH;
     /// @dev SparseTree used for tracking deposits
     SparseMerkleTree.Bytes32SMT internal depositTree;
     /// @dev SparseTree used for tracking claims
@@ -36,7 +36,7 @@ abstract contract BridgeStorage is IBridgeTypes {
     /// @dev Used to keep track of the number of claims
     uint256 public CLAIM_COUNTER;
 
-    constructor() {
+    function __initialise() internal {
         BRIDGE = msg.sender;
         MAX_DEPTH = 32;
         depositTree.initialize(MAX_DEPTH);

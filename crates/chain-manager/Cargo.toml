@@ -8,22 +8,16 @@ version.workspace = true
 
 [dependencies]
 jsonrpsee = { workspace = true, features = ["full"] }
-alloy = { workspace = true, features = [
-  "eips",
-  "full",
-  "json-rpc",
-  "node-bindings",
-  "rpc-client",
-  "rpc-types-debug",
-  "rpc-types-trace",
-  "signer-aws",
-  "signer-gcp",
-  "signer-keystore",
-  "signer-ledger",
-  "signer-mnemonic",
-  "signer-trezor",
-  "signer-yubihsm",
-] }
+alloy-consensus = { workspace = true }
+alloy-provider = { workspace = true }
+alloy-rpc-types = { workspace = true }
+alloy-primitives = { workspace = true }
+alloy-network = { workspace = true }
+alloy-node-bindings = { workspace = true }
+alloy-signer = { workspace = true }
+alloy-signer-local = { workspace = true }
+once_cell = { workspace = true }
+
 thiserror = { workspace = true }
 eyre = { workspace = true }
 jsonrpsee-core = { workspace = true }

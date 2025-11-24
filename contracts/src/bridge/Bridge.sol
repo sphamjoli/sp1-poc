@@ -53,6 +53,7 @@ contract Bridge is
         __Ownable_init(owner);
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
+        __initialise();
     }
 
     /// @inheritdoc IBridge

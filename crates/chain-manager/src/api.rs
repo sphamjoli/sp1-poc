@@ -1,17 +1,16 @@
-use std::sync::Arc;
-
-use alloy::{
-    consensus::Header,
-    primitives::B256,
-    providers::{Provider, ProviderBuilder},
-    rpc::types::{eth::TransactionReceipt, BlockNumberOrTag},
-};
+use alloy_consensus::Header;
+use alloy_primitives::B256;
+use alloy_provider::{Provider, ProviderBuilder};
+use alloy_rpc_types::{eth::TransactionReceipt, BlockNumberOrTag};
 use dashmap::DashMap;
 use jsonrpsee::{
     core::{async_trait, RpcResult},
+    http_client::HttpClientBuilder,
     proc_macros::rpc,
+    server::ServerBuilder,
     types::ErrorObjectOwned,
 };
+use std::{fmt::Debug, net::SocketAddr, sync::Arc};
 use thiserror::Error;
 
 #[rpc(server, client)]
@@ -38,17 +37,28 @@ pub enum ChainManagerError {
     #[error("We use this for generic errors")]
     GenericFailure { reason: String, chain_id: u64 },
 }
+
 #[derive(Clone, Debug, Default)]
 pub struct ChainConfig {
-    chain_id: u64,
-    rpc_url: String,
+    pub chain_id: u64,
+    pub rpc_url: String,
 }
 
 /// We dont need to create a provider since validators
 /// Are going to query on demand so we init a provider based on chn id
+#[derive(Clone, Default)]
 pub struct ChainManagerImpl {
-    configs: Vec<ChainConfig>,
-    providers: Arc<DashMap<u64, Arc<dyn Provider>>>,
+    pub configs: Vec<ChainConfig>,
+    pub providers: Arc<DashMap<u64, Arc<dyn Provider>>>,
+}
+
+impl std::fmt::Debug for ChainManagerImpl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ChainManagerImpl")
+            .field("configs", &self.configs)
+            .field("providers", &"<non-debuggable Provider map>")
+            .finish()
+    }
 }
 
 impl From<ChainManagerError> for ErrorObjectOwned {
@@ -89,8 +99,7 @@ impl ChainManagerImpl {
         let url = chain_config.rpc_url.as_str();
         let provider = ProviderBuilder::new().connect(url).await.map_err(|error| {
             ChainManagerError::GenericFailure {
-                reason: format!("Something went wrong while initialising provider {error:?}")
-                    .into(),
+                reason: format!("Something went wrong while initialising provider {error:?}"),
                 chain_id,
             }
         })?;
@@ -103,29 +112,37 @@ impl ChainManagerImpl {
 #[async_trait]
 impl ChainManagerServer for ChainManagerImpl {
     async fn finalised_header(&self, chain_id: u64, at: BlockNumberOrTag) -> RpcResult<Header> {
-        let provider = self.get_provider(chain_id).await.map_err(|error| error);
-
-        let header = provider.unwrap().get_block_by_number(at).full().await.map_err(|error| {
+        let provider = self.get_provider(chain_id).await.map_err(|error| {
             ChainManagerError::GenericFailure {
-                reason: format!("Something went wrong while getting finalised header {error:?}")
-                    .into(),
+                reason: format!("Something went wrong while getting finalised header {error:?}"),
                 chain_id,
             }
-        });
+        })?;
 
-        Ok(header.unwrap().unwrap().header.into())
+        let block = provider.get_block_by_number(at).full().await.map_err(|error| {
+            ChainManagerError::GenericFailure {
+                reason: format!("Something went wrong while getting finalised header {error:?}"),
+                chain_id,
+            }
+        })?;
+
+        let header = block.ok_or_else(|| ChainManagerError::GenericFailure {
+            reason: "Something went wrong while getting finalised header".to_string(),
+            chain_id,
+        })?;
+
+        Ok(header.header.into())
     }
     async fn transaction_receipt(
         &self,
         chain_id: u64,
         tx_hash: B256,
     ) -> RpcResult<Option<TransactionReceipt>> {
-        let provider = self.get_provider(chain_id).await.map_err(|error| error);
+        let provider = self.get_provider(chain_id).await;
 
         let receipt = provider.unwrap().get_transaction_receipt(tx_hash).await.map_err(|error| {
             ChainManagerError::GenericFailure {
-                reason: format!("Something went wrong while getting transaction receipt {error:?}")
-                    .into(),
+                reason: format!("Something went wrong while getting transaction receipt {error:?}"),
                 chain_id,
             }
         });
@@ -135,26 +152,37 @@ impl ChainManagerServer for ChainManagerImpl {
 }
 
 impl ChainManagerImpl {
-    fn new(configs: Vec<ChainConfig>) -> Self {
+    pub fn new(configs: Vec<ChainConfig>) -> Self {
         Self { configs, providers: Default::default() }
+    }
+
+    pub async fn create_start_server(
+        &self,
+        address: &str,
+    ) -> Result<
+        (jsonrpsee::server::ServerHandle, jsonrpsee::http_client::HttpClient),
+        Box<dyn std::error::Error>,
+    > {
+        let server_addr: SocketAddr = address.parse()?;
+        let server = ServerBuilder::default().build(server_addr).await?;
+        let handle = server.start(self.clone().into_rpc());
+        let client = HttpClientBuilder::default().build(format!("http://{}", address))?;
+        Ok((handle, client))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        api::{ChainManagerServer, Header},
-        ChainConfig, ChainManagerClient, ChainManagerImpl,
-    };
-    use alloy::{
-        network::TransactionBuilder,
-        node_bindings::{Anvil, AnvilInstance},
-        primitives::U256,
-        providers::{Provider, ProviderBuilder},
-        rpc::types::{eth::TransactionRequest, BlockNumberOrTag},
-    };
+    use crate::api::{ChainConfig, ChainManagerClient, ChainManagerImpl, Header};
+    use alloy_network::TransactionBuilder;
+    use alloy_node_bindings::{Anvil, AnvilInstance};
+    use alloy_primitives::U256;
+    use alloy_provider::{Provider, ProviderBuilder};
+    use alloy_rpc_types::{BlockNumberOrTag, TransactionRequest};
+    use alloy_signer_local::PrivateKeySigner;
     use jsonrpsee::{http_client::HttpClientBuilder, rpc_params, server::ServerBuilder};
     use jsonrpsee_core::client::ClientT;
+    use once_cell::sync::Lazy;
     use serial_test::serial;
     use std::net::SocketAddr;
 
@@ -179,27 +207,13 @@ mod test {
             .collect()
     }
 
-    async fn create_start_server(
-        manager: impl ChainManagerServer,
-        address: &str,
-    ) -> Result<
-        (jsonrpsee::server::ServerHandle, jsonrpsee::http_client::HttpClient),
-        Box<dyn std::error::Error>,
-    > {
-        let server_addr: SocketAddr = address.parse()?;
-        let server = ServerBuilder::default().build(server_addr).await?;
-        let handle = server.start(manager.into_rpc());
-        let client = HttpClientBuilder::default().build(format!("http://{}", address))?;
-        Ok((handle, client))
-    }
-
     #[tokio::test]
     #[serial]
     async fn test_basic_header_retrieval() -> Result<(), Box<dyn std::error::Error>> {
-        let anvils = create_anvil_instances(1, 8545);
+        let anvils = create_anvil_instances(1, 8547);
         let configs = create_configs(&anvils);
-        let manager = ChainManagerImpl::new(configs);
-        let (handle, client) = create_start_server(manager, "127.0.0.1:3000").await?;
+        let (handle, client) =
+            ChainManagerImpl::new(configs).create_start_server("127.0.0.1:3000").await?;
 
         let chain_id = anvils[0].chain_id();
         let header: Header = client
@@ -216,11 +230,10 @@ mod test {
     #[tokio::test]
     #[serial]
     async fn test_provider_caching() -> Result<(), Box<dyn std::error::Error>> {
-        let anvils = create_anvil_instances(1, 8545);
+        let anvils = create_anvil_instances(1, 8547);
         let configs = create_configs(&anvils);
-        let manager = ChainManagerImpl::new(configs);
-        let (handle, client) = create_start_server(manager, "127.0.0.1:3000").await?;
-
+        let (handle, client) =
+            ChainManagerImpl::new(configs).create_start_server("127.0.0.1:3000").await?;
         let chain_id = anvils[0].chain_id();
 
         for _ in 0..5 {
@@ -238,10 +251,10 @@ mod test {
     #[tokio::test]
     #[serial]
     async fn test_multi_chain_routing() -> Result<(), Box<dyn std::error::Error>> {
-        let anvils = create_anvil_instances(2, 8545);
+        let anvils = create_anvil_instances(2, 8547);
         let configs = create_configs(&anvils);
-        let manager = ChainManagerImpl::new(configs);
-        let (handle, client) = create_start_server(manager, "127.0.0.1:3000").await?;
+        let (handle, client) =
+            ChainManagerImpl::new(configs).create_start_server("127.0.0.1:3000").await?;
 
         let header_1: Header =
             client.request("finalisedHeader", rpc_params!(1u64, BlockNumberOrTag::Latest)).await?;
@@ -260,12 +273,12 @@ mod test {
     #[tokio::test]
     #[serial]
     async fn test_transaction_receipt() -> Result<(), Box<dyn std::error::Error>> {
-        let anvils = create_anvil_instances(1, 8545);
+        let anvils = create_anvil_instances(1, 8547);
         let configs = create_configs(&anvils);
-        let manager = ChainManagerImpl::new(configs);
-        let (handle, client) = create_start_server(manager, "127.0.0.1:3000").await?;
+        let (handle, client) =
+            ChainManagerImpl::new(configs).create_start_server("127.0.0.1:3000").await?;
 
-        let signer: alloy::signers::local::PrivateKeySigner = anvils[0].keys()[0].clone().into();
+        let signer: PrivateKeySigner = anvils[0].keys()[0].clone().into();
         let provider =
             ProviderBuilder::new().wallet(signer.clone()).connect_http(anvils[0].endpoint_url());
 
@@ -293,10 +306,10 @@ mod test {
     #[tokio::test]
     #[serial]
     async fn test_unknown_chain_error() -> Result<(), Box<dyn std::error::Error>> {
-        let anvils = create_anvil_instances(1, 8545);
+        let anvils = create_anvil_instances(1, 8547);
         let configs = create_configs(&anvils);
-        let manager = ChainManagerImpl::new(configs);
-        let (handle, client) = create_start_server(manager, "127.0.0.1:3000").await?;
+        let (handle, client) =
+            ChainManagerImpl::new(configs).create_start_server("127.0.0.1:3000").await?;
 
         let result: Result<Header, _> =
             client.request("finalisedHeader", rpc_params!(9999u64, BlockNumberOrTag::Latest)).await;

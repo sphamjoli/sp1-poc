@@ -12,7 +12,8 @@
   },
   "scripts": {
     "test": "forge test --vvvvv",
-    "lint:sol": "solhint 'src/**/*.sol'"
+    "lint:sol": "solhint 'src/**/*.sol'",
+    "generate:bridgeEvents":"npx ts-node index.ts"
   },
   "devDependencies": {
     "@prb/math": "^4.1.0",

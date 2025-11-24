@@ -14,7 +14,7 @@ services:
       - my-proxy-net
 
   graphql-engine:
-    image: hasura/graphql-engine:v2.36.0  
+    image: hasura/graphql-engine:v2.36.0
     ports:
       - "${HASURA_EXTERNAL_PORT:-8080}:8080"
     user: 1001:1001
@@ -28,7 +28,7 @@ services:
       HASURA_GRAPHQL_NO_OF_RETRIES: 10
       HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET:-testing}
       HASURA_GRAPHQL_STRINGIFY_NUMERIC_TYPES: "true"
-      HASURA_GRAPHQL_DEV_MODE: "true"  
+      HASURA_GRAPHQL_DEV_MODE: "true"
       PORT: 8080
       HASURA_GRAPHQL_UNAUTHORIZED_ROLE: public
     healthcheck:
@@ -46,7 +46,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8081:8081"
+      - "8082:8082"
     depends_on:
       graphql-engine:
         condition: service_healthy
@@ -57,28 +57,28 @@ services:
       ENVIO_PG_PORT: 5432
       ENVIO_PG_USER: ${ENVIO_PG_USER:-postgres}
       ENVIO_PG_DATABASE: ${ENVIO_PG_DATABASE:-envio-dev}
-      
+
       # Legacy env vars (for backwards compatibility)
       PG_PASSWORD: ${ENVIO_POSTGRES_PASSWORD:-testing}
       PG_HOST: envio-postgres
       PG_PORT: 5432
       PG_USER: ${ENVIO_PG_USER:-postgres}
       PG_DATABASE: ${ENVIO_PG_DATABASE:-envio-dev}
-      
+
       # Hasura connection - Fixed endpoint URL
-      HASURA_GRAPHQL_ENDPOINT: http://graphql-engine:8080/v1/graphql  
+      HASURA_GRAPHQL_ENDPOINT: http://graphql-engine:8080/v1/graphql
       HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET:-testing}
       HASURA_SERVICE_HOST: graphql-engine
       HASURA_SERVICE_PORT: 8080
-      
+
       # Indexer config
       CONFIG_FILE: ${CONFIG_FILE:-config.yaml}
       LOG_LEVEL: ${LOG_LEVEL:-trace}
       LOG_STRATEGY: ${LOG_STRATEGY:-console-pretty}
       TUI_OFF: ${TUI_OFF:-true}
-      
+
     healthcheck:
-      test: timeout 1s bash -c ':> /dev/tcp/127.0.0.1/8081' || exit 1 
+      test: timeout 1s bash -c ':> /dev/tcp/127.0.0.1/8082' || exit 1
       interval: 5s
       timeout: 2s
       retries: 50
