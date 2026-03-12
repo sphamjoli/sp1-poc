@@ -8,11 +8,11 @@ import {IStakeManagerTypes} from "./IStakeManagerTypes.sol";
 /// @notice Interface for managing validator stakes and rewards in a bridge validation system
 /// @dev Implements a modular staking system with BLS signature support and epoch-based rewards
 interface IStakeManager is IStakeManagerTypes {
-    /// @notice Initialize the stake manager with configuration and validator manager
+    /// @notice Initialize the stake manager with configuration and owner
     /// @param config Initial staking configuration parameters
-    /// @param manager Address of the validator manager contract
+    /// @param owner Address that will own and wire the contract after deployment
     /// @dev Can only be called once during deployment
-    function initialize(StakeManagerConfig calldata config, address manager) external;
+    function initialize(StakeManagerConfig calldata config, address owner) external;
 
     /// @notice Stake tokens to become a validator
     /// @param params Staking parameters including BLS public key and stake amount

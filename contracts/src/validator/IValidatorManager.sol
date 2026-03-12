@@ -35,9 +35,10 @@ import {IValidatorTypes} from "./IValidatorTypes.sol";
 
 interface IValidatorManager is IValidatorTypes {
     /// @notice Initialize the ValidatorManager contract
+    /// @param owner Address that will own the validator manager
     /// @param verifier SP1VerifierGateway which can be used to verify proofs for any version of SP1
     /// @param programKey The verification key for the Bridge
-    function initialize(address verifier, bytes32 programKey) external;
+    function initialize(address owner, address verifier, bytes32 programKey) external;
 
     /// @notice Submit bridge state root attestation
     /// @param attestation Signed attestation of bridge state - see {IValidatorTypes.BridgeAttestation}

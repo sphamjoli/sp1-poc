@@ -95,7 +95,7 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
 
     function _loadBlsTestData() internal {
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/test/data/bls.json");
+        string memory path = string.concat(root, "/../config/dev-validators.json");
 
         require(vm.exists(path), "BLS test data file not found");
 
@@ -103,7 +103,7 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         require(bytes(json).length > 0, "BLS test data file is empty");
 
         bool isArray = _isJsonArray(json);
-        uint256 length = isArray ? _scanArrayLengthByKey(json, "private_key") : 1;
+        uint256 length = isArray ? _scanArrayLengthByKey(json, "wallet_address") : 1;
         require(length > 0, "No valid BLS test data found in file");
 
         console.log("Parsing %s BLS test case(s)", length);
@@ -114,7 +114,8 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
     }
 
     function _parseBlsDataAtIndex(string memory json, uint256 index, bool isArray) internal {
-        string memory base = isArray ? string.concat("$[", vm.toString(index), "]") : "$";
+        string memory base =
+            isArray ? string.concat("$[", vm.toString(index), "].legacy") : "$.legacy";
 
         BlsTestData memory data;
 
@@ -216,10 +217,10 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
 
         if (forkId == FORKA_ID) {
             (stakeManagerA, validatorManagerA, testConfigA, testConfigVersionA) =
-                _deployStakeManagerForChain(address(TOKEN_CHAINA), true);
+                _deployStakeManagerForChain(address(TOKEN_CHAINA), true, ownerA);
         } else if (forkId == FORKB_ID) {
             (stakeManagerB, validatorManagerB, testConfigB, testConfigVersionB) =
-                _deployStakeManagerForChain(address(TOKEN_CHAINB), false);
+                _deployStakeManagerForChain(address(TOKEN_CHAINB), false, ownerB);
         } else {
             revert("Invalid fork ID provided");
         }
@@ -229,7 +230,8 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
 
     function _deployStakeManagerForChain(
         address _stakingToken,
-        bool _enableStaking
+        bool _enableStaking,
+        address owner
     )
         internal
         returns (
@@ -257,7 +259,7 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         );
         address validatorManagerAddr = Upgrades.deployUUPSProxy(
             "ValidatorManager.sol",
-            abi.encodeCall(ValidatorManager.initialize, (SP1_VERIFIER, PROGRAM_VKEY)),
+            abi.encodeCall(ValidatorManager.initialize, (owner, SP1_VERIFIER, PROGRAM_VKEY)),
             options
         );
         validatorManager = ValidatorManager(validatorManagerAddr);

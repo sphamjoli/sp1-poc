@@ -7,22 +7,9 @@ import {IStakeManagerTypes} from "./IStakeManagerTypes.sol";
 /// @author brianspha
 /// @notice Abstract storage layer for Staking operations
 abstract contract StakeManagerStorage is IStakeManagerTypes {
-    /// @dev Protects unauthorised calls not made by the ValidatorManager contract
-    modifier onlyStakeManager() {
-        require(msg.sender == STAKE_MANAGER, NotAdminManager());
-        _;
-    }
-
     /// @dev StakeManager storage position
     bytes32 internal constant SM_STORAGE_SLOT =
         bytes32(uint256(keccak256(abi.encodePacked("com.stakeManager.storage"))) - 1);
-
-    /// @dev The StakeManager contract address
-    address public immutable STAKE_MANAGER;
-
-    constructor() {
-        STAKE_MANAGER = msg.sender;
-    }
 
     /// @notice Get StakeManager storage
     /// @return $ Storage struct

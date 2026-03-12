@@ -13,7 +13,9 @@
   "scripts": {
     "test": "forge test --vvvvv",
     "lint:sol": "solhint 'src/**/*.sol'",
-    "generate:bridgeEvents":"npx ts-node index.ts"
+    "generate:bridgeEvents":"npx ts-node index.ts",
+    "deploy:satelliate":"forge clean && forge script script/bridge/BridgeScript.s.sol:BridgeDeployScript --rpc-url http://localhost:8545 --broadcast -vvvvv --account main --password 1234567 --disable-code-size-limit",
+    "deploy:base":"forge clean && forge script script/bridge/BridgeScript.s.sol:BridgeDeployScript --rpc-url http://localhost:8546 --broadcast -vvvvv --account main --password 1234567 --disable-code-size-limit"
   },
   "devDependencies": {
     "@prb/math": "^4.1.0",

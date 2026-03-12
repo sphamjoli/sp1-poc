@@ -1,0 +1,54 @@
+FROM rust:1.85-bookworm AS builder
+
+WORKDIR /app
+
+ENV PATH="/root/.cargo/bin:/root/.sp1/bin:${PATH}"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        clang \
+        cmake \
+        git \
+        libssl-dev \
+        pkg-config \
+        protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -L https://sp1.succinct.xyz | bash \
+    && /root/.sp1/bin/sp1up
+
+COPY Cargo.toml Cargo.lock rust-toolchain ./
+COPY crates ./crates
+COPY config ./config
+
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/app/target \
+    cargo build --release -j 1 -p chain-manager -p node-manager -p bridge-validator -p bridge-script -p validator-utils \
+    && mkdir -p /opt/runtime-bin \
+    && cp /app/target/release/chain-manager /opt/runtime-bin/chain-manager \
+    && cp /app/target/release/node-manager /opt/runtime-bin/node-manager \
+    && cp /app/target/release/bridge-validator /opt/runtime-bin/bridge-validator \
+    && cp /app/target/release/validator-utils /opt/runtime-bin/validator-utils \
+    && cp /app/target/release/evm /opt/runtime-bin/evm
+
+FROM debian:bookworm-slim
+
+WORKDIR /workspace
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/runtime-bin/chain-manager /usr/local/bin/chain-manager
+COPY --from=builder /opt/runtime-bin/node-manager /usr/local/bin/node-manager
+COPY --from=builder /opt/runtime-bin/bridge-validator /usr/local/bin/bridge-validator
+COPY --from=builder /opt/runtime-bin/validator-utils /usr/local/bin/validator-utils
+COPY --from=builder /opt/runtime-bin/evm /usr/local/bin/evm
+
+CMD ["/bin/bash"]

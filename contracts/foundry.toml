@@ -8,6 +8,10 @@ ast = true
 build_info = true
 extra_output = ["storageLayout"]
 allow_internal_expect_revert = true
+# Raise the per-contract bytecode limit beyond EIP-170's 24 576 bytes so that
+# StakeManager (≈45 kB) and ValidatorManager (≈32 kB) can be compiled and
+# deployed to local Anvil nodes during development.
+code_size_limit = 999999
 [fmt]
 line_length = 100
 tab_width = 4

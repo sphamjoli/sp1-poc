@@ -46,7 +46,7 @@ contract StakeManager is
     }
 
     /// @notice Chain ID where this contract is deployed
-    uint256 public immutable CHAIN_ID;
+    uint256 public CHAIN_ID;
 
     /// @notice Counter for NFT token IDs
     uint256 public COUNTER;
@@ -64,12 +64,12 @@ contract StakeManager is
     string public VERSION;
 
     /// @notice Annual reward rate in basis points (500 = 5%)
-    uint256 public immutable REWARD_RATE;
+    uint256 public constant REWARD_RATE = 500;
 
-    uint256 public immutable PERFORMANCE_SCALE;
+    uint256 public constant PERFORMANCE_SCALE = 10_000;
 
     /// @notice Scaling factor for precise calculations
-    uint64 public immutable SCALING_FACTOR;
+    uint64 public constant SCALING_FACTOR = 1e18;
 
     /// @notice Domain separator for BLS proof of possession
     bytes public POP_STAKE_DOMAIN;
@@ -85,41 +85,34 @@ contract StakeManager is
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
-        CHAIN_ID = block.chainid;
-        REWARD_RATE = 500;
-        SCALING_FACTOR = 1e18;
-        PERFORMANCE_SCALE = 10_000;
         _disableInitializers();
     }
 
     /// @inheritdoc IStakeManager
     function initialize(
         StakeManagerConfig memory config,
-        address manager
+        address owner
     )
         external
         override
         initializer
     {
+        CHAIN_ID = block.chainid;
         COUNTER = 1;
         NAME = "StakeManager";
         VERSION = "1";
         POP_STAKE_DOMAIN = "StakeManager:BN254:PoP:v1:";
-        // ~90 days at 10 min epochs assuming we dont change this we could
-        // instead add a function to update this but for now its ayt
         EARLY_BONUS_EPOCHS = 12_960;
-        // 80% performance minimum
         MIN_PERFORMANCE_THRESHOLD = 8_000;
-        // 1 token bonus could be more but this is a POC
         EARLY_BONUS_AMOUNT = 1e18;
 
-        __Ownable_init(msg.sender);
+        __Ownable_init(owner);
         __ERC721_init("SP1 Bridge Poc", "SBP");
         __Pausable_init();
+        __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
 
-        upgradeStakeConfig(config);
-        updateValidatorManager(manager);
+        _setStakeConfig(config);
     }
 
     /// @inheritdoc IStakeManager
@@ -161,7 +154,6 @@ contract StakeManager is
         IERC20 token = IERC20(ACTIVE_STAKING_CONFIG.stakingToken);
         token.safeTransferFrom(msg.sender, address(this), params.stakeAmount);
 
-        // Increase principal by the newly staked amount
         $.principal[ACTIVE_STAKING_CONFIG.stakingToken] += params.stakeAmount;
 
         if (validator.tokenId == 0) {
@@ -206,7 +198,6 @@ contract StakeManager is
         uint256 received = balAfter - balBefore;
         require(received > 0, NotReservesRecieved());
 
-        // credit rewards budget for this token
         SmStorage storage $ = _loadStorage();
         $.rewardReserves[token] += received;
 
@@ -266,8 +257,6 @@ contract StakeManager is
         assembly {
             let pointer := mload(0x40)
             mstore(pointer, mload(config))
-            // @dev we use 8 here since we need to keep space for
-            // storing the results of keccak256
             let length := mul(0x20, 8)
             for { let i := 0 } lt(i, length) { i := add(i, 0x20) } {
                 mstore(add(pointer, i), mload(add(config, i)))
@@ -288,10 +277,6 @@ contract StakeManager is
         require(config.minStakeAmount > 0, InvalidStakingConfig());
 
         if (info.status == IValidatorTypes.ValidatorStatus.Inactive) {
-            // This is the case where validators want to exit after being
-            // Jailed for being slashed below the threshold and do not want
-            // To topup we also reset their rewards to 0 since everything
-            // Is being withdrawn
             validator.unstakeAmount = validator.stakeAmount + validator.balance;
             validator.stakeAmount = 0;
             validator.balance = 0;
@@ -359,6 +344,10 @@ contract StakeManager is
 
     /// @inheritdoc IStakeManager
     function upgradeStakeConfig(StakeManagerConfig memory config) public override onlyOwner {
+        _setStakeConfig(config);
+    }
+
+    function _setStakeConfig(StakeManagerConfig memory config) internal {
         emit StakeManagerConfigUpdated(ACTIVE_STAKING_CONFIG, config);
         ACTIVE_STAKING_CONFIG = config;
         SmStorage storage $ = _loadStorage();
@@ -374,21 +363,19 @@ contract StakeManager is
         StakeManagerConfig memory config = $.stakingManagerVersions[validator.stakeVersion];
         require(config.minStakeAmount > 0, InvalidStakeVersion());
         require(validator.stakeAmount > 0, ValidatorNotFound());
+        IValidatorTypes.ValidatorInfo memory info =
+            IValidatorManager(VALIDATOR_MANAGER).getValidator(params.validator);
+        if (info.status != IValidatorTypes.ValidatorStatus.Active) {
+            revert ValidatorNotActive(params.validator);
+        }
 
         uint256 balance = validator.stakeAmount + validator.balance;
         require(balance >= params.slashAmount, InsufficientStakeToSlash());
 
         uint256 originalStake = validator.stakeAmount;
-
-        // Compute how much of the slash comes from stake vs. accrued rewards.
         (uint256 fromStake, uint256 fromRewards) = _processSlashing(validator, params.slashAmount);
-
-        // Reallocate: principal reduces by stake portion; reserves increase by total slashed.
         $.principal[config.stakingToken] -= fromStake;
         $.rewardReserves[config.stakingToken] += (fromStake + fromRewards);
-
-        // Strict threshold: if remaining stake is >0 but below min, jail (set Inactive) until top-up.
-        // Theres probz a better design but we keeping it simple here
         if (validator.stakeAmount < ACTIVE_STAKING_CONFIG.minStakeAmount) {
             IValidatorManager(VALIDATOR_MANAGER).updateValidatorStatus(
                 params.validator, IValidatorTypes.ValidatorStatus.Inactive
@@ -523,14 +510,6 @@ contract StakeManager is
         } else {
             uint256 remainingAmount = validator.unstakeAmount - validator.balance;
             validator.balance = 0;
-            // Theres a scenario where the validator has been jailed
-            // But have no interest on topping up since they were slahed
-            // Below the min stake amount as such they want to withdraw everything
-            // Including the rewards they have accumalated we could use their rewards
-            // To top up but thats up to them we care for allowing them to withdraw everything
-            // So the below statement of substracting from stakeAmount the remaining amount needs
-            // To ensure that we cater for if the stakeAmount has been reset to 0 in the beginUnstake
-            // Step since the validators rewards have also been also reset to 0
             validator.stakeAmount =
                 validator.stakeAmount > 0 ? validator.stakeAmount - remainingAmount : 0;
             partialExit = validator.stakeAmount > 0;
@@ -556,17 +535,14 @@ contract StakeManager is
         returns (uint256 fromStake, uint256 fromRewards)
     {
         if (validator.stakeAmount >= slashAmount) {
-            // Entire slash comes from stake.
             validator.stakeAmount -= slashAmount;
             fromStake = slashAmount;
             fromRewards = 0;
         } else if (validator.balance >= slashAmount) {
-            // Entire slash comes from rewards.
             validator.balance -= slashAmount;
             fromStake = 0;
             fromRewards = slashAmount;
         } else {
-            // Consume all rewards first, then the remainder from stake.
             uint256 remainingSlash = slashAmount - validator.balance;
             fromRewards = validator.balance;
             validator.balance = 0;
@@ -650,8 +626,6 @@ contract StakeManager is
 
         for (uint256 i = 0; i < validators.length; i++) {
             IValidatorTypes.ValidatorInfo memory vi = validators[i];
-
-            // Defensive status gate: skip non-Active or under-min-stake validators.
             IValidatorTypes.ValidatorInfo memory live =
                 IValidatorManager(VALIDATOR_MANAGER).getValidator(vi.wallet);
             if (

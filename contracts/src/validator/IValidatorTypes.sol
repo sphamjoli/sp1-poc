@@ -33,6 +33,12 @@ interface IValidatorTypes {
     /// @notice Validator has already attested to this root
     error AlreadyAttested();
 
+    /// @notice This finalized proof payload or verified root has already been processed
+    error FinalizationAlreadyProcessed(bytes32 key);
+
+    /// @notice Finalization payload contains inconsistent attestation metadata
+    error InconsistentAttestationBatch();
+
     /// @notice Thrown when msg.sender is not the StakeManager contract
     error NotAdminManager(address caller);
 
@@ -68,7 +74,7 @@ interface IValidatorTypes {
         uint256 blockNumber;
         bytes32 bridgeRoot;
         bytes32 stateRoot;
-        uint256 chainId;
+        uint256 sourceChainId;
     }
 
     /// @notice Complete validator information
@@ -98,7 +104,7 @@ interface IValidatorTypes {
         uint256 blockNumber;
         bytes32 bridgeRoot;
         bytes32 stateRoot;
-        uint256 chainId;
+        uint256 sourceChainId;
         uint256 timestamp;
         address validator;
         bytes certificate;
@@ -106,7 +112,7 @@ interface IValidatorTypes {
     }
 
     /// @notice Aggregated bridge state attestation from multiple validators
-    /// @param chainId Source chain identifier (e.g., 1 for Ethereum)
+    /// @param sourceChainId Source chain identifier (e.g., 1 for Ethereum)
     /// @param blockNumber Block number where bridge state was captured
     /// @param bridgeRoot Root hash of bridge contract's state tree
     /// @param stateRoot State root of the blockchain at blockNumber
@@ -115,7 +121,7 @@ interface IValidatorTypes {
     /// @param aggregatedSignature BLS aggregated signature over attestation data
     /// @param aggregatedPublicKey BLS aggregated public keys from all participants
     struct AggregatedBridgeAttestation {
-        uint256 chainId;
+        uint256 sourceChainId;
         uint256 blockNumber;
         bytes32 bridgeRoot;
         bytes32 stateRoot;
@@ -126,12 +132,12 @@ interface IValidatorTypes {
     }
 
     /// @notice SP1 verification public values for bridge roots
-    /// @param chainId Source chain identifier
+    /// @param attestedChainId Source chain identifier proven by SP1
     /// @param attestations Array of bridge attestations to verify
     /// @param equivocators Array of slash parameters for misbehaving validators
     /// @param validBridgeRoot The verified correct bridge root
     struct VerificationPublicValues {
-        uint256 chainId;
+        uint256 attestedChainId;
         BridgeAttestation[] attestations;
         IStakeManagerTypes.SlashParams[] equivocators;
         bytes32 validBridgeRoot;
@@ -157,6 +163,8 @@ interface IValidatorTypes {
     /// @param validators Mapping of validator addresses to their information
     /// @param attestations Mapping of validator to root hash to attestation status
     /// @param preConfirmations Mapping of root hashes to pre-confirmation data
+    /// @param processedFinalizations Mapping of encoded SP1 public-value payload hashes already finalized
+    /// @param finalizedRoots Mapping of canonical verified root keys already finalized
     /// @param activeValidators Set of currently active validator addresses
     /// @param certificateNonces stores all nonces for validator certificates
     /// @param __gap Storage gap for future upgrades
@@ -164,9 +172,11 @@ interface IValidatorTypes {
         mapping(address validator => ValidatorInfo info) validators;
         mapping(address validator => mapping(bytes32 => bool)) attestations;
         mapping(bytes32 root => PreConfirmation) preConfirmations;
+        mapping(bytes32 finalizationHash => bool) processedFinalizations;
+        mapping(bytes32 finalizedRootKey => bool) finalizedRoots;
         mapping(address validator => uint256 nonce) certificateNonces;
         EnumerableSet.AddressSet activeValidators;
-        uint256[46] __gap;
+        uint256[44] __gap;
     }
 
     /// @notice Time-bound authorization certificate issued by node manager
@@ -212,11 +222,18 @@ interface IValidatorTypes {
 
     /// @notice Emitted when validator submits bridge attestation
     /// @param validator Address of validator
-    /// @param chainId Chain that was attested
+    /// @param sourceChainId Chain that was attested
     /// @param bridgeRoot Bridge root that was attested
     /// @param blockNumber Block number of attestation
+    /// @param stateRoot State root for the attested block
+    /// @param timestamp Timestamp included in the attestation payload
     event AttestationSubmitted(
-        address indexed validator, uint256 indexed chainId, bytes32 bridgeRoot, uint256 blockNumber
+        address indexed validator,
+        uint256 indexed sourceChainId,
+        bytes32 indexed bridgeRoot,
+        uint256 blockNumber,
+        bytes32 stateRoot,
+        uint256 timestamp
     );
 
     /// @notice Emitted when bridge root is verified by SP1 system

@@ -67,7 +67,7 @@ abstract contract ValidatorManagerBaseTest is StakeManagerBaseTest {
         bytes32 bridgeRoot,
         uint256 blockNumber,
         bytes memory certificate,
-        uint256 chainId
+        uint256 sourceChainId
     )
         internal
         view
@@ -80,33 +80,82 @@ abstract contract ValidatorManagerBaseTest is StakeManagerBaseTest {
             timestamp: block.timestamp,
             validator: validator,
             certificate: certificate,
-            chainId: chainId,
-            signature: _signAttestation(validator, chainId)
+            sourceChainId: sourceChainId,
+            signature: [uint256(0), uint256(0)]
         });
     }
-    /// @notice Signs an attestation using validator's BLS proof of possession
-    /// @dev We dont need this function but for reuse we create it
-    /// @param validator Validator address
-    /// @param chainId The currently active fork id
-    /// @return signature BLS signature as uint256
 
+    /// @notice Signs an attestation using the validator-utils signing command
+    /// @param validator Validator address
+    /// @param sourceChainId Source chain that the attestation references
+    /// @param blockNumber Source chain block number
+    /// @param bridgeRoot Bridge root being attested
+    /// @param stateRoot State root being attested
+    /// @param timestamp Timestamp embedded in the attestation payload
+    /// @return signature BLS signature as uint256
     function _signAttestation(
         address validator,
-        uint256 chainId
+        uint256 sourceChainId,
+        uint256 blockNumber,
+        bytes32 bridgeRoot,
+        bytes32 stateRoot,
+        uint256 timestamp
     )
         internal
-        view
         returns (uint256[2] memory signature)
     {
-        BlsTestData memory data = validatorBlsData[validator];
-        ProofData memory proofData = validatorProofData[validator][chainId];
+        string[] memory command = new string[](16);
 
-        require(bytes(data.walletAddress).length > 0, "No BLS data for validator");
+        command[0] = vm.envOr(
+            "VALIDATOR_UTILS_BIN",
+            string.concat(vm.projectRoot(), "/../target/debug/validator-utils")
+        );
+        command[1] = "sign-attestation";
+        command[2] = "--config";
+        command[3] = vm.envOr(
+            "VALIDATOR_UTILS_CONFIG",
+            string.concat(vm.projectRoot(), "/../config/runtime.local.json")
+        );
+        command[4] = "--validator";
+        command[5] = _validatorName(validator);
+        command[6] = "--source-chain-id";
+        command[7] = vm.toString(sourceChainId);
+        command[8] = "--block-number";
+        command[9] = vm.toString(blockNumber);
+        command[10] = "--bridge-root";
+        command[11] = vm.toString(bridgeRoot);
+        command[12] = "--state-root";
+        command[13] = vm.toString(stateRoot);
+        command[14] = "--timestamp";
+        command[15] = vm.toString(timestamp);
 
-        signature = [
-            vm.parseUint(proofData.proofOfPossessionValidator[0]),
-            vm.parseUint(proofData.proofOfPossessionValidator[1])
-        ];
+        string memory json = string(vm.ffi(command));
+
+        signature[0] = vm.parseUint(vm.parseJsonString(json, ".signature[0]"));
+        signature[1] = vm.parseUint(vm.parseJsonString(json, ".signature[1]"));
+    }
+
+    /// @notice Resolves a validator address to the configured catalog name
+    /// @param validator Validator wallet address
+    /// @return name Catalog entry name
+    function _validatorName(address validator) internal view returns (string memory name) {
+        if (validator == alice) {
+            return "alice";
+        }
+        if (validator == bob) {
+            return "bob";
+        }
+        if (validator == jenifer) {
+            return "jenifer";
+        }
+        if (validator == spha) {
+            return "spha";
+        }
+        if (validator == james) {
+            return "james";
+        }
+
+        revert("Unknown validator");
     }
 
     /// @notice Adds a validator to the ValidatorManager contract
@@ -156,15 +205,23 @@ abstract contract ValidatorManagerBaseTest is StakeManagerBaseTest {
         internal
     {
         vm.selectFork(forkId);
+        uint256 sourceChainId = forkId == FORKB_ID ? CHAINA_ID : CHAINB_ID;
         for (uint256 i = 0; i < validators.length; i++) {
             (bytes memory certificate,) =
                 _issueCertificate(validators[i], forkId, block.timestamp + 10 minutes);
 
             IValidatorTypes.BridgeAttestation memory attestation = _createAttestation(
-                validators[i], bridgeRoot, blockNumber, certificate, block.chainid
+                validators[i], bridgeRoot, blockNumber, certificate, sourceChainId
             );
 
-            attestation.signature = _signAttestation(validators[i], block.chainid);
+            attestation.signature = _signAttestation(
+                validators[i],
+                sourceChainId,
+                attestation.blockNumber,
+                attestation.bridgeRoot,
+                attestation.stateRoot,
+                attestation.timestamp
+            );
 
             vm.prank(validators[i]);
 
@@ -222,7 +279,7 @@ abstract contract ValidatorManagerBaseTest is StakeManagerBaseTest {
 
         IValidatorTypes.VerificationPublicValues memory publicValues = IValidatorTypes
             .VerificationPublicValues({
-            chainId: block.chainid,
+            attestedChainId: filtered.length > 0 ? filtered[0].sourceChainId : CHAINA_ID,
             attestations: filtered,
             equivocators: equivocators,
             validBridgeRoot: validBridgeRoot

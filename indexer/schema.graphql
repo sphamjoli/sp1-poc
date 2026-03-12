@@ -3,7 +3,7 @@ type User {
   id: ID!
   # Total number of deposits made by this user
   depositCount: Int!
-  # Total number of claims made by this user  
+  # Total number of claims made by this user
   claimCount: Int!
   # List of all deposits made by this user
   deposits: [Deposit!]! @derivedFrom(field: "user_id")
@@ -17,6 +17,10 @@ type User {
   firstDepositAt: BigInt
   # Timestamp of last activity
   lastActivityAt: BigInt!
+  # Total number of attestations submitted by this user (if acting as a validator)
+  attestationCount: Int!
+  # List of all attestations submitted by this user (if acting as a validator)
+  attestations: [Attestation!]! @derivedFrom(field: "validator")
 }
 
 type Token {
@@ -49,6 +53,8 @@ type Token {
 type Deposit {
   # Unique identifier: transaction_hash + log_index
   id: ID!
+  # Address that submitted the deposit transaction
+  who: String!
   # User who made the deposit (foreign key)
   user_id: String!
   # Amount deposited in token's smallest unit
@@ -63,6 +69,10 @@ type Deposit {
   transactionHash: String!
   # Block number where deposit occurred
   blockNumber: BigInt!
+  # Deposit index assigned by the source bridge
+  depositIndex: BigInt!
+  # Deposit root emitted by the source bridge
+  depositRoot: String!
   # Block timestamp in seconds
   timestamp: BigInt!
   # Log index within the transaction
@@ -131,6 +141,8 @@ type BridgeStats {
   activeChains: Int!
   # Last updated timestamp
   lastUpdated: BigInt!
+  # Total number of attestations observed
+  totalAttestations: Int!
 }
 
 type DailyStats {
@@ -173,4 +185,35 @@ type ChainStats {
   uniqueClaimers: Int!
   # Whether this chain is currently active for bridging
   isActive: Boolean!
+}
+
+type Attestation {
+  # Unique identifier: transaction_hash + log_index
+  id: ID!
+  # Validator address who submitted the attestation
+  validator: String!
+  # Address of the ValidatorManager contract that emitted this attestation log
+  validatorManager: String!
+  # Chain ID whose Bridge root is being attested
+  sourceChainId: BigInt!
+  # Block number on the source chain that the root corresponds to
+  sourceBlockNumber: BigInt!
+  # Bridge root being attested (bytes32 hex string)
+  bridgeRoot: String!
+  # State root at the attested block number (bytes32 hex string)
+  stateRoot: String!
+  # Timestamp used in the signed attestation struct (seconds)
+  timestamp: BigInt!
+  # Transaction hash where the attestation occurred
+  transactionHash: String!
+  # Block number where the attestation occurred (on the chain where ValidatorManager lives)
+  blockNumber: BigInt!
+  # Block timestamp in seconds (on the chain where ValidatorManager lives)
+  blockTimestamp: BigInt!
+  # Log index within the transaction
+  logIndex: Int!
+  # Gas price used for the attestation transaction
+  gasPrice: BigInt
+  # Gas used by the attestation transaction
+  gasUsed: BigInt
 }

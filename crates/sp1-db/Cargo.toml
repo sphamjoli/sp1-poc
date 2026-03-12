@@ -1,0 +1,36 @@
+[package]
+name = "sp1-db"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+exclude.workspace = true
+version.workspace = true
+
+[dependencies]
+chain-manager = { workspace = true }
+alloy = { workspace = true, features = ["full"] }
+alloy-sol-types = { workspace = true }
+alloy-primitives = { workspace = true }
+alloy-consensus = { workspace = true }
+alloy-provider = { workspace = true }
+alloy-rpc-types = { workspace = true }
+alloy-network = { workspace = true }
+alloy-node-bindings = { workspace = true }
+alloy-signer = { workspace = true }
+alloy-signer-local = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+clap = { workspace = true }
+dotenv = { workspace = true }
+hex = { workspace = true }
+eyre = { workspace = true }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
+futures = { workspace = true }
+gql_client = { workspace = true }
+mongodb = { workspace = true, features = ["rustls-tls", "compat-3-0-0"] }
+bloomfilter = { workspace = true }
+sha3 = { workspace = true }
+sp1-types = { workspace = true }
+
+[lints]
+workspace = true

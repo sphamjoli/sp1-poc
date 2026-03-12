@@ -18,21 +18,21 @@ const PRIVATE_KEY =
 const account = privateKeyToAccount(PRIVATE_KEY)
 
 const CHAINS: Record<number, { rpc: string }> = {
-    1: { rpc: "http://localhost:8545" },
-    8453: { rpc: "http://localhost:8546" },
+    31338: { rpc: "http://localhost:8545" },
+    31339: { rpc: "http://localhost:8546" },
 }
 
 const CONTRACTS: Record<
     number,
     { bridge: `0x${string}`; tokenA: `0x${string}`; tokenB: `0x${string}` }
 > = {
-    1: {
+    31338: {
         bridge: "0xF1a7a5060f22edA40b1A94a858995fa2bcf5E75A",
         tokenA: "0x2bc0484B5b0FAfFf0a14B858D85E8830621fE0CA",
         tokenB: "0x4c07ce6454D5340591f62fD7d3978B6f42Ef953e",
     },
-    8453: {
-        bridge: "0xCfecDD44270Fa180d9EC79d7A56f1A8bC9363Ee8",
+    31339: {
+        bridge: "0xB7b8738297d4a91F08d9Ff18E4bA5eEDB21522C2",
         tokenA: "0xFeaBf2d20A0Ba3431Aba53079123Ef1F2B017040",
         tokenB: "0x396299f03Df7d8b001bE510f5b1d8d5FFb797e33",
     },
@@ -152,16 +152,16 @@ async function claim(chainId: number, params: ClaimParams) {
 
 async function main() {
     await deposit({
-        fromChain: 1,
-        token: CONTRACTS[1].tokenA,
+        fromChain: 31338,
+        token: CONTRACTS[31338].tokenA,
         amount: "1.0",
-        destinationChain: 8453,
+        destinationChain: 31339,
     })
-        await deposit({
-        fromChain: 8453,
-        token: CONTRACTS[8453].tokenA,
+    await deposit({
+        fromChain: 31339,
+        token: CONTRACTS[31339].tokenA,
         amount: "1.0",
-        destinationChain: 1,
+        destinationChain: 31338,
     })
 
 }

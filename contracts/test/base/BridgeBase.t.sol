@@ -68,6 +68,10 @@ abstract contract BridgeBaseTest is Test, IBridgeTypes {
     /// @notice End-to-end environment bootstrap across two forks
     /// @dev Creates users, forks, deploys bridge/token contracts per chain, mints and distributes balances, labels addresses.
     function setUp() public virtual noGasMetering {
+        // Keep OZ upgrade checks enabled while allowing SparseMerkleTree's
+        // internal function pointers in storage.
+        options.unsafeAllow = "internal-function-storage";
+
         (ownerA, ownerAPrivateKey) = _createUserWitPrivateKey("ownerA");
         (ownerB, ownerBPrivateKey) = _createUserWitPrivateKey("ownerB");
         spha = _createUser("spha");
@@ -75,9 +79,6 @@ abstract contract BridgeBaseTest is Test, IBridgeTypes {
         alice = _createUser("alice");
         bob = _createUser("bob");
         jenifer = _createUser("jenifer");
-
-        // Skip bytecode and storage layout checks for faster proxy deploys in tests.
-        options.unsafeSkipAllChecks = true;
 
         // Create forks from RPC URLs provided via environment.
         FORKA_ID = vm.createFork(vm.envString("ETH_RPC_URL"));

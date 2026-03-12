@@ -1,0 +1,23 @@
+[package]
+name = "sp1-types"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+exclude.workspace = true
+version.workspace = true
+[features]
+default = ["std"]
+std = ["serde/std", "alloy-primitives/std", "serde_json"]
+
+[dependencies]
+alloy-primitives = { workspace = true, default-features = false, features = [
+  "serde",
+] }
+serde = { workspace = true, default-features = false, features = [
+  "derive",
+  "alloc",
+] }
+serde_json = { workspace = true, optional = true }
+
+[lints]
+workspace = true

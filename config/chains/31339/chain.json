@@ -1,0 +1,36 @@
+{
+  "id": 31339,
+  "name": "Base",
+  "rpc_url": "http://127.0.0.1:8546",
+  "fork_url": "https://mainnet.base.org",
+  "deployment": {
+    "bridge": {
+      "native_liquidity_wei": "1000000000000000000000"
+    },
+    "token_a": {
+      "name": "Base Bridge Token A",
+      "symbol": "BBTA",
+      "initial_supply_wei": "1000000000000000000000000000",
+      "bridge_liquidity_wei": "500000000000000000000000000"
+    },
+    "token_b": {
+      "name": "Base Bridge Token B",
+      "symbol": "BBTB",
+      "initial_supply_wei": "1000000000000000000000000000",
+      "bridge_liquidity_wei": "500000000000000000000000000"
+    },
+    "stake_manager": {
+      "min_stake_amount_wei": "200000000000000000000",
+      "min_withdraw_amount_wei": "1000000000000000000",
+      "min_unstake_delay_seconds": 604800,
+      "correct_proof_reward_wei": "1000000000000000000",
+      "incorrect_proof_penalty_wei": "1000000000000000000",
+      "max_missed_proofs": 3,
+      "slashing_rate": 10
+    },
+    "validator_manager": {
+      "deploy": true,
+      "sp1_verifier_address": "0x397A5f7f3dBd538f23DE225B51f532c34448dA9B"
+    }
+  }
+}

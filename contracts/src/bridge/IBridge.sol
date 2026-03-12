@@ -2,6 +2,7 @@
 pragma solidity ^0.8.30;
 
 import {IBridgeTypes} from "./BridgeTypes.sol";
+import {SparseMerkleTree} from "../libs/LocalExitTreeLib.sol";
 
 /// @title IBridge
 /// @notice Interface for a proof-driven cross-chain bridge
@@ -46,6 +47,14 @@ interface IBridge is IBridgeTypes {
     /// @param token Token address, or zero address for ETH
     /// @return balance Current balance held by the contract
     function getBalance(address token) external view returns (uint256 balance);
+
+    /// @notice Get the source-chain Merkle proof for a deposit
+    /// @param depositIndex Deposit index on this chain
+    /// @return proof Sparse Merkle proof for the requested deposit
+    function getDepositProof(uint256 depositIndex)
+        external
+        view
+        returns (SparseMerkleTree.Proof memory proof);
 
     /// @notice Update the validator manager used to verify source roots
     /// @dev Governance or owner should control this address

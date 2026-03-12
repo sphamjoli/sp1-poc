@@ -88,7 +88,7 @@ contract LocalExitTreeLibFuzzTest is BridgeBaseTest {
             DepositParams memory params =
                 DepositParams({amount: amount, to: to, destinationChain: CHAINB_ID, token: token});
 
-            exitLeaves[i] = LocalExitTreeLib.computeExitLeaf(params, block.chainid, i);
+            exitLeaves[i] = LocalExitTreeLib.computeExitLeaf(params, block.chainid, startIndex + i);
         }
 
         treeA.batchAddDeposits(startIndex, exitLeaves);

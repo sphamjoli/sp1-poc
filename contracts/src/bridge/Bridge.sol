@@ -99,7 +99,7 @@ contract Bridge is
     }
 
     /// @inheritdoc IBridge
-    function updateValidatorManager(address validatorManager) external override onlyBridge {
+    function updateValidatorManager(address validatorManager) external override onlyOwner {
         require(validatorManager != address(0), IValidatorTypes.ZeroAddress());
         emit ValidatorManagerUpdated(VALIDATOR_MANAGER, validatorManager);
         VALIDATOR_MANAGER = validatorManager;
@@ -116,7 +116,7 @@ contract Bridge is
         );
         require(msg.sender == claimParams.to, InvalidTransaction());
         IValidatorTypes.RootParams memory params = IValidatorTypes.RootParams({
-            chainId: claimParams.sourceChain,
+            sourceChainId: claimParams.sourceChain,
             bridgeRoot: claimParams.sourceRoot,
             blockNumber: claimParams.blockNumber,
             stateRoot: claimParams.stateRoot
@@ -198,19 +198,34 @@ contract Bridge is
         pure
         returns (bool valid)
     {
-        if (!proof.existence) return false;
+        if (!proof.existence && proof.auxExistence && proof.key == proof.auxKey) return false;
 
-        bytes32 computed = proof.value;
-        uint256 idx = uint256(proof.key);
+        bytes32 computed;
+        if (proof.existence) {
+            computed = keccak256(abi.encodePacked(proof.key, proof.value, bytes32(uint256(1))));
+        } else if (proof.auxExistence) {
+            computed =
+                keccak256(abi.encodePacked(proof.auxKey, proof.auxValue, bytes32(uint256(1))));
+        }
 
-        for (uint256 i = 0; i < proof.siblings.length; i++) {
-            bytes32 sib = proof.siblings[i];
-            if (((idx >> i) & 1) == 1) {
-                computed = keccak256(abi.encodePacked(sib, computed));
+        uint256 pathIndex = uint256(proof.key);
+        uint256 depth = proof.siblings.length;
+
+        while (depth > 0 && proof.siblings[depth - 1] == bytes32(0)) {
+            --depth;
+        }
+
+        for (uint256 i = depth; i > 0; --i) {
+            uint256 sIndex = i - 1;
+            bytes32 sibling = proof.siblings[sIndex];
+
+            if ((pathIndex >> sIndex) & 1 == 1) {
+                computed = keccak256(abi.encodePacked(sibling, computed));
             } else {
-                computed = keccak256(abi.encodePacked(computed, sib));
+                computed = keccak256(abi.encodePacked(computed, sibling));
             }
         }
+
         return computed == root;
     }
 
@@ -246,6 +261,15 @@ contract Bridge is
             return address(this).balance;
         }
         return IERC20(token).balanceOf(address(this));
+    }
+
+    /// @inheritdoc IBridge
+    function getDepositProof(uint256 depositIndex)
+        external
+        view
+        returns (SparseMerkleTree.Proof memory proof)
+    {
+        return generateDepositProof(depositIndex);
     }
 
     /// @notice Authorize contract upgrades

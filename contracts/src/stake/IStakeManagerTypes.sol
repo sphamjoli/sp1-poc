@@ -168,6 +168,9 @@ interface IStakeManagerTypes {
     /// @notice Invalid validator address
     error InvalidValidator();
 
+    /// @notice Validator must still be active to be slashable
+    error ValidatorNotActive(address validator);
+
     /// @notice Slash amount is zero
     error ZeroSlashAmount();
 

@@ -7,6 +7,8 @@ members = [
   "crates/node-manager",
   "crates/validator-utils",
   "crates/chain-manager",
+  "crates/sp1-types",
+  "crates/sp1-db",
 ]
 resolver = "2"
 
@@ -43,7 +45,9 @@ alloy-network = { version = "1.1.2" }
 alloy-node-bindings = { version = "1.1.2" }
 alloy-signer = { version = "1.1.2" }
 alloy-signer-local = { version = "1.1.2" }
+alloy-trie = { version = "0.9.1" }
 alloy-rlp = { version = "0.3.12" }
+alloy-eips = { version = "1.1.2" }
 
 # local crates
 chain-manager = { path = "crates/chain-manager" }
@@ -51,7 +55,8 @@ bridge-script = { path = "crates/bridge-script" }
 bridge-validator-evm = { path = "crates/bridge-validator-evm" }
 bls-test-utils = { path = "crates/bls-test-utils" }
 validator-utils = { path = "crates/validator-utils" }
-
+sp1-types = { path = "crates/sp1-types" }
+sp1-db = { path = "crates/sp1-db" }
 
 # Database dependencies
 mongodb = { version = "3.2.4", features = [
@@ -83,11 +88,12 @@ crypto-bigint = { version = "0.6.1" }
 dashmap = { version = "6.1.0" }
 serial_test = { version = "3.2.0" }
 once_cell = { version = "1.21.3" }
-
 jsonrpsee = { version = "0.26.0", features = ["full"] }
 jsonrpsee-core = { version = "0.26.0" }
 async-trait = { version = "0.1.88" }
-
+reth-trie = { git = "https://github.com/paradigmxyz/reth", tag = "v1.9.3" }
+reth-trie-common = { git = "https://github.com/paradigmxyz/reth", tag = "v1.9.3" }
+tracing-subscriber = { version = "0.3.22" }
 
 [workspace.lints]
 rust.missing_debug_implementations = "warn"

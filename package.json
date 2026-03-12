@@ -1,0 +1,22 @@
+{
+  "name": "co-processor-poc",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scripts:runtime-config": "node --import tsx scripts/runtime-config.ts",
+    "scripts:check-runtime-deployments": "node --import tsx scripts/check-runtime-deployments.ts",
+    "scripts:sync-chains": "node --import tsx scripts/sync-chains.ts",
+    "scripts:generate-stack-compose": "node --import tsx scripts/generate-stack-compose.ts",
+    "scripts:update-indexer-config": "node --import tsx scripts/update-indexer-config.ts",
+    "scripts:verify-indexer-config": "node --import tsx scripts/verify-indexer-config.ts",
+    "scripts:wait-indexer-ready": "node --import tsx scripts/wait-indexer-ready.ts",
+    "scripts:render-bridge-report": "node --import tsx scripts/render-bridge-report.ts",
+    "scripts:run-bridge-validation": "node --import tsx scripts/run-bridge-validation.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

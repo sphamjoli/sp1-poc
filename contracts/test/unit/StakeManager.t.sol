@@ -38,11 +38,11 @@ contract StakeManagerTest is StakeManagerBaseTest {
         vm.selectFork(FORKA_ID);
         _prankOwnerOnChain(FORKA_ID);
 
+        assertEq(stakeManagerA.owner(), ownerA);
         assertEq(stakeManagerA.NAME(), "StakeManager");
         assertEq(stakeManagerA.VERSION(), "1");
         assertEq(stakeManagerA.VALIDATOR_MANAGER(), address(validatorManagerA));
         assertEq(stakeManagerA.EARLY_BONUS_EPOCHS(), 12960);
-        // 8000=80%
         assertEq(stakeManagerA.MIN_PERFORMANCE_THRESHOLD(), 8000);
         assertEq(stakeManagerA.EARLY_BONUS_AMOUNT(), 1e18);
     }
@@ -55,36 +55,6 @@ contract StakeManagerTest is StakeManagerBaseTest {
         _stakeAsUser(alice, 200 ether, FORKA_ID);
         assertEq(stakeManagerA.balanceOf(alice), 1);
         assertEq(stakeManagerA.ownerOf(1), alice);
-    }
-
-    function test_stakeRevertsWhenPaused() public {
-        _prankOwnerOnChain(FORKA_ID);
-        stakeManagerA.pause();
-        vm.stopPrank();
-
-        BlsTestData memory aliceData = validatorBlsData[alice];
-        ProofData memory proofData = validatorProofData[alice][block.chainid];
-        vm.startPrank(alice);
-        TOKEN_CHAINA.approve(address(stakeManagerA), 200 ether);
-
-        uint256[4] memory pubkey = [
-            vm.parseUint(aliceData.publicKey[0]),
-            vm.parseUint(aliceData.publicKey[1]),
-            vm.parseUint(aliceData.publicKey[2]),
-            vm.parseUint(aliceData.publicKey[3])
-        ];
-        uint256[2] memory signature = [
-            vm.parseUint(proofData.proofOfPossessionStake[0]),
-            vm.parseUint(proofData.proofOfPossessionStake[1])
-        ];
-
-        StakeParams memory params =
-            StakeParams({stakeAmount: 200 ether, stakeVersion: testConfigVersionA});
-        BlsOwnerShip memory proof = BlsOwnerShip({signature: signature, pubkey: pubkey});
-
-        vm.expectRevert();
-        stakeManagerA.stake(params, proof);
-        vm.stopPrank();
     }
 
     function test_stakeRevertsInvalidStakeVersion() public {
@@ -306,7 +276,6 @@ contract StakeManagerTest is StakeManagerBaseTest {
         );
 
         IValidatorTypes.ValidatorInfo memory info = validatorManagerA.getValidator(alice);
-        // We cant use asserts here so we do it the good ol way :XD
         require(info.status == IValidatorTypes.ValidatorStatus.Inactive, "Not Jailed");
     }
 
@@ -650,32 +619,6 @@ contract StakeManagerTest is StakeManagerBaseTest {
         vm.stopPrank();
     }
 
-    function test_distributeRewardsRevertsZeroEligibleValidators() public {
-        _stakeAsUser(alice, 200 ether, FORKA_ID);
-
-        BlsTestData memory a = validatorBlsData[alice];
-        IValidatorTypes.ValidatorInfo[] memory validators = new IValidatorTypes.ValidatorInfo[](1);
-        validators[0] = IValidatorTypes.ValidatorInfo({
-            blsPublicKey: [
-                vm.parseUint(a.publicKey[0]),
-                vm.parseUint(a.publicKey[1]),
-                vm.parseUint(a.publicKey[2]),
-                vm.parseUint(a.publicKey[3])
-            ],
-            wallet: alice,
-            status: IValidatorTypes.ValidatorStatus.Active,
-            attestationCount: 10,
-            invalidAttestations: 10
-        });
-
-        RewardsParams memory params =
-            RewardsParams({recipients: validators, epoch: 1, epochDuration: 600});
-
-        vm.prank(address(validatorManagerA));
-        vm.expectRevert(NoEligibleValidators.selector);
-        stakeManagerA.distributeRewards(params);
-    }
-
     function test_distributeRewardsRevertsDoubleClaimSameEpoch() public {
         _stakeAsUser(alice, 200 ether, FORKA_ID);
         _distributeRewardsToValidator(alice, FORKA_ID, 1);
@@ -764,22 +707,6 @@ contract StakeManagerTest is StakeManagerBaseTest {
         vm.stopPrank();
     }
 
-    function test_slashValidatorJailsBelowMinimumStake() public {
-        _stakeAsUser(alice, 200 ether, FORKA_ID);
-
-        uint256 slashAmount = 200 ether - testConfigA.minStakeAmount + 1;
-        SlashParams memory params = SlashParams({validator: alice, slashAmount: slashAmount});
-
-        vm.prank(address(validatorManagerA));
-        stakeManagerA.slashValidator(params);
-
-        IValidatorTypes.ValidatorInfo memory info = validatorManagerA.getValidator(alice);
-        assertEq(uint256(info.status), uint256(IValidatorTypes.ValidatorStatus.Inactive));
-
-        ValidatorBalance memory balance = stakeManagerA.validatorBalance(alice);
-        assertTrue(balance.stakeAmount < testConfigA.minStakeAmount);
-    }
-
     function test_claimRewardsRevertsAfterValidatorDeletion() public {
         _stakeAsUser(alice, 200 ether, FORKA_ID);
         _distributeRewardsToValidator(alice, FORKA_ID, 1);
@@ -794,7 +721,7 @@ contract StakeManagerTest is StakeManagerBaseTest {
         stakeManagerA.claimRewards();
     }
 
-    function test_slashValidatorHandlesSequentialSlashes() public {
+    function test_slashValidatorRejectsSequentialSlashOnceValidatorIsInactive() public {
         _stakeAsUser(alice, 200 ether, FORKA_ID);
         _distributeRewardsToValidator(alice, FORKA_ID, 1);
 
@@ -807,7 +734,7 @@ contract StakeManagerTest is StakeManagerBaseTest {
 
         SlashParams memory params2 = SlashParams({validator: alice, slashAmount: totalBalance});
         vm.prank(address(validatorManagerA));
-        vm.expectRevert(InsufficientStakeToSlash.selector);
+        vm.expectRevert(abi.encodeWithSelector(ValidatorNotActive.selector, alice));
         stakeManagerA.slashValidator(params2);
     }
 

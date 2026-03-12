@@ -1,0 +1,44 @@
+{
+  "base_chain_id": 31339,
+  "owner_private_key": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+  "runtime": {
+    "state_dir": "artifacts/runtime/state",
+    "log_dir": "artifacts/runtime/logs",
+    "pid_dir": "artifacts/runtime/pids"
+  },
+  "services": {
+    "anvil": {
+      "state_interval_secs": 5
+    },
+    "chain_manager": {
+      "bind": "127.0.0.1:3000"
+    },
+    "node_manager": {
+      "bind": "127.0.0.1:7001",
+      "certificate_ttl_secs": 600,
+      "reconcile_interval_secs": 15
+    },
+    "ui": {
+      "bind": "127.0.0.1:4173"
+    },
+    "validator": {
+      "poll_interval_secs": 3,
+      "max_backoff_secs": 30
+    },
+    "sp1": {
+      "interval_secs": 60
+    }
+  },
+  "indexer": {
+    "hasura_url": "http://localhost:8083/v1/graphql",
+    "hasura_secret": "testing"
+  },
+  "validators_path": "config/dev-validators.json",
+  "deployments_dir": "contracts/deploy-out",
+  "chains_path": "config/chains",
+  "bootstrap": {
+    "gas_threshold_wei": "1000000000000000000",
+    "gas_topup_wei": "5000000000000000000",
+    "staking_amount_wei": "200000000000000000000"
+  }
+}

@@ -6,9 +6,25 @@ authors.workspace = true
 exclude.workspace = true
 version.workspace = true
 
+[lib]
+name = "bridge_program"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bridge-program"
+path = "src/main.rs"
+required-features = ["zkvm"]
+
+[features]
+default = ["zkvm"]
+zkvm = ["sp1-zkvm"]
+
 [dependencies]
-sp1-zkvm = { workspace = true, default-features = true }
-serde = { workspace = true }
+sp1-zkvm         = { workspace = true, optional = true }
+serde            = { workspace = true }
 alloy-primitives = { workspace = true }
-alloy-sol-types = { workspace = true }
-alloy-rlp = { workspace = true }
+alloy-sol-types  = { workspace = true }
+alloy-rlp        = { workspace = true }
+alloy-trie       = { workspace = true }
+sha3             = { workspace = true }
+sp1-types        = { workspace = true }

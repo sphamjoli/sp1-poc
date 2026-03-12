@@ -1,0 +1,48 @@
+FROM debian:bookworm-slim AS builder
+
+ARG FOUNDRY_VERSION=stable
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    bash \
+    git \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -u 1000 -s /bin/bash foundry
+USER foundry
+WORKDIR /home/foundry
+
+ENV FOUNDRY_DIR=/home/foundry/.foundry
+ENV PATH="${FOUNDRY_DIR}/bin:${PATH}"
+
+RUN curl -L https://foundry.paradigm.xyz | bash \
+  && if [ "${FOUNDRY_VERSION}" = "stable" ]; then \
+       ${FOUNDRY_DIR}/bin/foundryup; \
+     else \
+       ${FOUNDRY_DIR}/bin/foundryup --install "${FOUNDRY_VERSION}"; \
+     fi \
+  && anvil --version \
+  && forge --version \
+  && cast --version
+
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -u 1000 -s /bin/bash foundry
+USER foundry
+WORKDIR /home/foundry
+
+COPY --from=builder /home/foundry/.foundry/bin/ /home/foundry/.foundry/bin/
+ENV PATH="/home/foundry/.foundry/bin:${PATH}"
+
+EXPOSE 8545
+ENTRYPOINT ["anvil"]
+CMD ["--help"]

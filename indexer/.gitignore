@@ -26,10 +26,13 @@ lib/*
 .bsb.lock
 node_modules/
 build/
+coverage/
+playwright-report/
+test-results/
 benchmarks/
 artifacts
 cache
 *.res.js
 *.res.mjs
-generated
+generated/
 .env
