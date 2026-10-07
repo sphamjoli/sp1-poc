@@ -1591,9 +1591,9 @@ dependencies = [
 
 [[package]]
 name = "block-buffer"
-version = "0.11.0-rc.5"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9ef36a6fcdb072aa548f3da057640ec10859eb4e91ddf526ee648d50c76a949"
+checksum = "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa"
 dependencies = [
  "hybrid-array",
 ]
@@ -1622,7 +1622,7 @@ dependencies = [
  "hex",
  "serde",
  "serde_json",
- "sha3 0.11.0-rc.3",
+ "sha3 0.12.0",
  "sylow",
 ]
 
@@ -1684,7 +1684,7 @@ dependencies = [
  "alloy-trie",
  "proptest",
  "serde",
- "sha3 0.11.0-rc.3",
+ "sha3 0.12.0",
  "sp1-types",
  "sp1-zkvm",
 ]
@@ -1716,7 +1716,7 @@ dependencies = [
  "mongodb",
  "serde",
  "serde_json",
- "sha3 0.11.0-rc.3",
+ "sha3 0.12.0",
  "sp1-build",
  "sp1-db",
  "sp1-sdk",
@@ -2278,9 +2278,9 @@ dependencies = [
 
 [[package]]
 name = "crypto-common"
-version = "0.2.0-rc.4"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a8235645834fbc6832939736ce2f2d08192652269e11010a6240f61b908a1c6"
+checksum = "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453"
 dependencies = [
  "hybrid-array",
 ]
@@ -2548,13 +2548,13 @@ dependencies = [
 
 [[package]]
 name = "digest"
-version = "0.11.0-rc.2"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6749b668519cd7149ee3d11286a442a8a8bdc3a9d529605f579777bfccc5a4bc"
+checksum = "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
 dependencies = [
- "block-buffer 0.11.0-rc.5",
+ "block-buffer 0.12.1",
  "const-oid 0.10.1",
- "crypto-common 0.2.0-rc.4",
+ "crypto-common 0.2.2",
 ]
 
 [[package]]
@@ -3425,9 +3425,9 @@ checksum = "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9"
 
 [[package]]
 name = "hybrid-array"
-version = "0.4.4"
+version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bad028b20a90afcdb5e28a53392562f1db2bdfa238aa1a978b911461bfffb92"
+checksum = "3944cf8cf766b40e2a1a333ee5e9b563f854d5fa49d6a8ca2764e97c6eddb214"
 dependencies = [
  "typenum",
 ]
@@ -4117,11 +4117,12 @@ dependencies = [
 
 [[package]]
 name = "keccak"
-version = "0.2.0-rc.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d546793a04a1d3049bd192856f804cfe96356e2cf36b54b4e575155babe9f41"
+checksum = "d8f198d1db720e4940b5a493201d199d9f24f568f8f746bd13706243a2f71598"
 dependencies = [
- "cpufeatures 0.2.17",
+ "cfg-if",
+ "cpufeatures 0.3.1",
 ]
 
 [[package]]
@@ -6788,12 +6789,23 @@ dependencies = [
 
 [[package]]
 name = "sha3"
-version = "0.11.0-rc.3"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2103ca0e6f4e9505eae906de5e5883e06fc3b2232fb5d6914890c7bbcb62f478"
+checksum = "be176f1a57ce4e3d31c1a166222d9768de5954f811601fb7ca06fc8203905ce1"
 dependencies = [
- "digest 0.11.0-rc.2",
- "keccak 0.2.0-rc.0",
+ "digest 0.11.3",
+ "keccak 0.2.2",
+]
+
+[[package]]
+name = "sha3"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc9bad02c26382724b2d2692c6f179285e4b54eeecd7968f52a50059c3c11759"
+dependencies = [
+ "digest 0.11.3",
+ "keccak 0.2.2",
+ "sponge-cursor",
 ]
 
 [[package]]
@@ -7114,7 +7126,7 @@ dependencies = [
  "mongodb",
  "serde",
  "serde_json",
- "sha3 0.11.0-rc.3",
+ "sha3 0.12.0",
  "sp1-types",
  "tokio",
 ]
@@ -7471,6 +7483,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "sponge-cursor"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a0219bd7d979d58245a4f41f695e1ac9f8befdffadd7f61f1bae9e39abc6620"
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7585,7 +7603,7 @@ checksum = "0ff2d721f94155d94f1231c241a911eaca4442c17e8e85488267abf0265aafe9"
 dependencies = [
  "crypto-bigint 0.6.1",
  "num-traits",
- "sha3 0.11.0-rc.3",
+ "sha3 0.11.0",
  "subtle",
  "tracing",
 ]
@@ -8381,7 +8399,7 @@ dependencies = [
  "hex",
  "serde",
  "serde_json",
- "sha3 0.11.0-rc.3",
+ "sha3 0.12.0",
  "sylow",
  "tokio",
  "tracing",
