@@ -32,8 +32,8 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          # Full history so a push to main scans the whole repository, not
-          # just the tip commit. Pull requests scan the merged working tree.
+          # Fetch full history; the scan below examines only tracked source
+          # at HEAD, including the merged checkout for pull requests.
           fetch-depth: 0
           persist-credentials: false
 
@@ -51,14 +51,9 @@ jobs:
         id: scan
         run: |
           set +e
-          # `gitleaks dir` walks the raw filesystem and does not honor
-          # .gitignore, so gitignored build output (target/, node_modules/,
-          # dist/) would be scanned if any happened to be present. This job
-          # never builds anything before this step, so none exists today —
-          # but .gitleaks.toml's [allowlist] excludes those paths explicitly
-          # so this stays true even if a future change adds a build/cache
-          # step earlier in this job, or someone runs this locally in a
-          # dirty working tree.
+          # Archive tracked source at HEAD into a clean directory, excluding
+          # untracked build outputs and installed dependencies. This snapshot
+          # scan does not examine earlier commits in the fetched history.
           mkdir /tmp/owned-source
           git archive HEAD | tar -x -C /tmp/owned-source
           gitleaks dir /tmp/owned-source \
@@ -112,6 +107,7 @@ jobs:
             refactor
             test
             chore
+            build
             ci
             perf
             revert
@@ -128,8 +124,9 @@ jobs:
             docs
             ci
             deps
+            deps-dev
           requireScope: false
-          subjectPattern: ^[a-zA-Z][-a-zA-Z0-9 .,():+/]+$
+          subjectPattern: ^[a-zA-Z][-a-zA-Z0-9_ @.,():+/]+$
 
       - name: Process result
         id: run
