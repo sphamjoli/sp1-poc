@@ -4,6 +4,8 @@ A Rust-led experiment in cross-chain transfers between local Ethereum and Base f
 
 This is an unaudited research prototype. The supplied runtime uses public Anvil development keys and **mock SP1 proving**. Its receipt roots are supplied by the host rather than authenticated by a consensus light client inside the guest. It must not custody real assets. See [security assumptions](SECURITY.md) before running it.
 
+![Bridge architecture](diagrams/sp1poc.png)
+
 ## What happens to a transfer
 
 1. A user deposits ETH or a supported token on the source fork.
