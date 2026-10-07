@@ -282,6 +282,32 @@ contract SecurityRegressionTest is Test {
         assertEq(stake.validatorBalance(alice).tokenId, 0);
     }
 
+    function test_rustAllBadFinalisationSlashesWithoutAttestationRecords() public {
+        alice = address(0x1111111111111111111111111111111111111111);
+        token.mint(alice, 1000 ether);
+        this.stakeAsAlice(200 ether);
+        bytes memory publicValues =
+            vm.parseBytes(vm.readFile("test/fixtures/all-bad-finalisation.hex"));
+        IValidatorTypes.VerificationPublicValues memory decoded =
+            abi.decode(publicValues, (IValidatorTypes.VerificationPublicValues));
+        assertEq(decoded.attestations.length, 0);
+        assertEq(decoded.equivocators.length, 1);
+        assertEq(decoded.equivocators[0].validator, alice);
+        assertEq(decoded.equivocators[0].slashAmount, 1 ether);
+        address verifier = manager.SP1_VERIFIER();
+        vm.mockCall(
+            verifier,
+            abi.encodeWithSelector(bytes4(keccak256("verifyProof(bytes32,bytes,bytes)"))),
+            bytes("")
+        );
+        manager.finaliseAttestations(
+            IValidatorTypes.VerificationParams({publicValues: publicValues, proofBytes: bytes("")})
+        );
+        assertEq(stake.validatorBalance(alice).stakeAmount, 199 ether);
+        assertEq(manager.getValidator(alice).invalidAttestations, 1);
+        assertEq(manager.getValidator(alice).attestationCount, 0);
+    }
+
     function test_feeTokenCannotInflateStake() public {
         token.setFee(true);
         vm.expectRevert(IStakeManagerTypes.TransferFailed.selector);

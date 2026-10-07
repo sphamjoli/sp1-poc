@@ -1,6 +1,9 @@
 use eyre::{Context, ContextCompat, Result};
 use serde::{Deserialize, Serialize};
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 use url::Url;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -269,9 +272,9 @@ fn replace_url_port(url: &str, port: &str) -> Result<String> {
     Ok(parsed_url.to_string())
 }
 
-fn resolve_configured_path(config_path: &PathBuf, configured_path: &PathBuf) -> PathBuf {
+fn resolve_configured_path(config_path: &Path, configured_path: &Path) -> PathBuf {
     if configured_path.is_absolute() {
-        return configured_path.clone();
+        return configured_path.to_path_buf();
     }
 
     let current_directory = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));

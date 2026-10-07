@@ -1,23 +1,18 @@
-## Envio ERC20 Template
+# Bridge event indexer
 
-*Please refer to the [documentation website](https://docs.envio.dev) for a thorough guide on all [Envio](https://envio.dev) indexer features*
+Envio indexes bridge deposits, claims and validator events into a GraphQL view for the Rust services and UI. Its rows are derived data; receipt proofs and contract state establish the relevant on-chain facts.
 
-### Run
+## Install and verify
 
-```bash
-pnpm dev
-```
-
-Visit http://localhost:8080 to see the GraphQL Playground, local password is `testing`.
-
-### Generate files from `config.yaml` or `schema.graphql`
+Use Node.js 22 or later, pnpm 10.17.1 for Envio's generated local package, and Bun 1.4.2 to run project commands.
 
 ```bash
-pnpm codegen
+pnpm install --frozen-lockfile
+bun run codegen
+bun run build
+bun run mocha
 ```
 
-### Pre-requisites
+Code generation follows `config.yaml` and `schema.graphql`. Generated code stays out of Git.
 
-- [Node.js (use v18 or newer)](https://nodejs.org/en/download/current)
-- [pnpm (use v8 or newer)](https://pnpm.io/installation)
-- [Docker desktop](https://www.docker.com/products/docker-desktop/)
+Run the full local system through the root [README](../README.md); runtime generation synchronises contract addresses and indexer ports. The development GraphQL secret is `testing`. Keep its published endpoint on loopback and use only development assets.

@@ -1,3 +1,6 @@
+//! Local validator control API with configured browser-origin restrictions.
+//! Loads the development runtime configuration and serves node status and actions.
+
 use alloy::primitives::U256;
 use axum::{
     extract::Request,

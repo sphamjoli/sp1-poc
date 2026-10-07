@@ -298,3 +298,19 @@ proptest::proptest! {
         proptest::prop_assert_eq!(build_public_values(&input), Err(ProgramError::BatchShapeMismatch));
     }
 }
+
+#[test]
+fn all_bad_finalisation_matches_cross_language_golden_vector() {
+    let mut input = make_valid_single_deposit_input();
+    input.slash_amount = U256::from(1_000_000_000_000_000_000u64);
+    input.attestations = vec![attestation_witness(
+        Address::from([0x11; 20]),
+        B256::from([0xbb; 32]),
+        B256::from([0x55; 32]),
+    )];
+    let expected = alloy_primitives::hex::decode(
+        include_str!("../../../contracts/test/fixtures/all-bad-finalisation.hex").trim(),
+    )
+    .unwrap();
+    assert_eq!(build_public_values(&input).unwrap(), expected);
+}

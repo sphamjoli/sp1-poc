@@ -38,6 +38,7 @@ check_web() {
   (cd apps/web && bun run build && bun run test && bun run test:e2e)
 }
 check_indexer() {
+  bun scripts/generate-chain-metadata.ts
   (cd indexer && bun run codegen && bun run build && bun run mocha)
 }
 check_contracts() (
