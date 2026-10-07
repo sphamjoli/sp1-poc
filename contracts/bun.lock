@@ -7,7 +7,7 @@
       "devDependencies": {
         "@openzeppelin/upgrades-core": "1.46.0",
         "@prb/math": "^4.1.0",
-        "@solarity/solidity-lib": "^3.2.0",
+        "@solarity/solidity-lib": "^3.3.3",
         "@types/node": "^24.1.0",
         "solhint": "^6.0.1",
         "typescript": "~5.0.4",
@@ -56,7 +56,7 @@
 
     "@sindresorhus/is": ["@sindresorhus/is@5.6.0", "", {}, "sha512-TV7t8GKYaJWsn00tFDqBw8+Uqmr8A0fRU1tvTQhyZzGv0sJCGRQL3JGMI3ucuKo3XIZdUP+Lx7/gh2t3lewy7g=="],
 
-    "@solarity/solidity-lib": ["@solarity/solidity-lib@3.2.0", "", { "dependencies": { "@openzeppelin/contracts": "5.4.0", "@openzeppelin/contracts-upgradeable": "5.4.0", "solady": "0.1.24" } }, "sha512-1LbO6jTXES3zedVTe6dswrZD2UcUNcrtfTWzVrLoSZxxNA+lGRsK8tNXQb+k8w52pjcNiPRkk/0k8XsExmn5zA=="],
+    "@solarity/solidity-lib": ["@solarity/solidity-lib@3.3.3", "", { "dependencies": { "@openzeppelin/contracts": "5.4.0", "@openzeppelin/contracts-upgradeable": "5.4.0", "solady": "0.1.24" } }, "sha512-jnqOxMO383HDtr56AOBim1f5f2MADuzgWeI/dhYFB82nnBPriC4wcsCtwI++KFqlt6yyvs3U2vzRxxK+S1BxRg=="],
 
     "@solidity-parser/parser": ["@solidity-parser/parser@0.20.2", "", {}, "sha512-rbu0bzwNvMcwAjH86hiEAcOeRI2EeK8zCkHDrFykh/Al8mvJeFmjy3UrE7GYQjNwOgbGUUtCn5/k8CB8zIu7QA=="],
 

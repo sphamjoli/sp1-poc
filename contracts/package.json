@@ -18,7 +18,7 @@
   "devDependencies": {
     "@openzeppelin/upgrades-core": "1.46.0",
     "@prb/math": "^4.1.0",
-    "@solarity/solidity-lib": "^3.2.0",
+    "@solarity/solidity-lib": "^3.3.3",
     "@types/node": "^24.1.0",
     "solhint": "^6.0.1",
     "typescript": "~5.0.4",
