@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {BridgeBaseTest} from "../base/BridgeBase.t.sol";
 
@@ -8,7 +8,9 @@ contract BridgeDepositFuzzTest is BridgeBaseTest {
         uint96 rawAmount,
         uint32 destinationChain,
         address recipient
-    ) public {
+    )
+        public
+    {
         vm.selectFork(FORKA_ID);
 
         uint256 amount = bound(uint256(rawAmount), 1, DEFAULT_TOKEN_BALANCE);

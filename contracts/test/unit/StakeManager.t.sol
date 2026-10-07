@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {StakeManagerBaseTest, IValidatorTypes, BLS, console} from "../base/StakeManagerBase.t.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -845,11 +845,10 @@ contract StakeManagerTest is StakeManagerBaseTest {
         stakeManagerA.beginUnstaking(UnstakingParams({stakeAmount: beforeBalance.stakeAmount}));
 
         ValidatorBalance memory afterBegin = stakeManagerA.validatorBalance(alice);
-        assertEq(afterBegin.stakeAmount, 0);
+        assertEq(afterBegin.stakeAmount, beforeBalance.stakeAmount);
         assertEq(afterBegin.unstakeAmount, beforeBalance.stakeAmount);
 
         uint256 beforeTokenBal = TOKEN_CHAINA.balanceOf(alice);
-        skip(10 days);
         vm.prank(alice);
         stakeManagerA.completeUnstaking();
 

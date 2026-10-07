@@ -139,3 +139,48 @@ fn parse_with_offset() {
     assert_eq!(item.payload, b"xyz");
     assert_eq!(next, 5);
 }
+
+use proptest::prelude::*;
+
+proptest! {
+    #[test]
+    fn arbitrary_rlp_never_panics_and_advances_within_input(
+        data in proptest::collection::vec(any::<u8>(), 0..1024),
+        offset in any::<usize>(),
+    ) {
+        if let Ok((item, next)) = parse_item(&data, offset) {
+            prop_assert!(next > offset);
+            prop_assert!(next <= data.len());
+            prop_assert!(item.payload.len() <= next - offset);
+        }
+    }
+
+    #[test]
+    fn oversized_lengths_are_rejected(
+        length in (usize::MAX - 8)..=usize::MAX,
+        is_list in any::<bool>(),
+        offset in 0usize..16,
+    ) {
+        let mut data = vec![0; offset];
+        data.push(if is_list { 0xff } else { 0xbf });
+        data.extend_from_slice(&(length as u64).to_be_bytes());
+        prop_assert!(parse_item(&data, offset).is_err());
+    }
+
+    #[test]
+    fn redundant_single_byte_prefix_is_rejected(byte in 0u8..=0x7f) {
+        prop_assert!(parse_item(&[0x81, byte], 0).is_err());
+    }
+
+    #[test]
+    fn non_canonical_long_lengths_are_rejected(
+        length in 0u8..56,
+        is_list in any::<bool>(),
+        leading_zero in any::<bool>(),
+    ) {
+        let base = if is_list { 0xf7 } else { 0xb7 };
+        let mut data = if leading_zero { vec![base + 2, 0, length] } else { vec![base + 1, length] };
+        data.extend(vec![0x80; usize::from(length)]);
+        prop_assert!(parse_item(&data, 0).is_err());
+    }
+}

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {StakeManager} from "../../src/stake/StakeManager.sol";
 import {BridgeToken} from "../../src/test/BridgeToken.sol";
@@ -253,9 +253,7 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         });
 
         address stakeManagerAddr = Upgrades.deployUUPSProxy(
-            "StakeManager.sol",
-            abi.encodeCall(StakeManager.initialize, (config, address(0))),
-            options
+            "StakeManager.sol", abi.encodeCall(StakeManager.initialize, (config, owner)), options
         );
         address validatorManagerAddr = Upgrades.deployUUPSProxy(
             "ValidatorManager.sol",
@@ -266,6 +264,7 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
         stakeManager = StakeManager(stakeManagerAddr);
         BridgeToken(_stakingToken).approve(stakeManagerAddr, type(uint256).max);
         if (_enableStaking) {
+            stakeManager.transferToken(_stakingToken, DEFAULT_REWARD_BALANCE);
             stakeManager.updateValidatorManager(validatorManagerAddr);
             validatorManager.updateStakingManager(stakeManagerAddr);
             configVersion = stakeManager.getStakeVersion(config);

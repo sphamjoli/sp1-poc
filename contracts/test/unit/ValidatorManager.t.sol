@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {IValidatorTypes} from "../../src/validator/IValidatorManager.sol";
 import {ValidatorManagerBaseTest} from "../base/ValidatorManagerBase.t.sol";
@@ -383,7 +383,6 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
             _addValidatorToManager(validatorAddresses[index], FORKB_ID);
         }
 
-        bytes32 root = _generateBridgeMockRoot(1);
         IValidatorTypes.BridgeAttestation[] memory attestations =
             new IValidatorTypes.BridgeAttestation[](5);
         bytes32 bridgeRoot = _generateBridgeMockRoot(8);
@@ -408,7 +407,7 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
         IStakeManagerTypes.SlashParams[] memory equivocators =
             _createEquivicators(validatorAddresses, validatorAddresses.length, 0);
 
-        _finalizeWithMocks(attestations, equivocators, root, FORKA_ID);
+        _finalizeWithMocks(attestations, equivocators, bridgeRoot, FORKA_ID);
 
         vm.selectFork(FORKA_ID);
         for (uint256 index = 0; index < validatorAddresses.length; index++) {
@@ -424,7 +423,6 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
             _addValidatorToManager(validatorAddresses[index], FORKB_ID);
         }
 
-        bytes32 root = _generateBridgeMockRoot(1);
         IValidatorTypes.BridgeAttestation[] memory attestations =
             new IValidatorTypes.BridgeAttestation[](5);
         bytes32 bridgeRoot = _generateBridgeMockRoot(8);
@@ -455,7 +453,7 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
         IStakeManagerTypes.SlashParams[] memory equivocators =
             _createEquivicators(validatorAddresses, startIndex, slashAmount);
 
-        _finalizeWithMocks(attestations, equivocators, root, FORKA_ID);
+        _finalizeWithMocks(attestations, equivocators, bridgeRoot, FORKA_ID);
         validatorManagerA.distributeRewards();
 
         vm.selectFork(FORKA_ID);
@@ -478,7 +476,6 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
             _addValidatorToManager(validatorAddresses[index], FORKB_ID);
         }
 
-        bytes32 root = _generateBridgeMockRoot(1);
         IValidatorTypes.BridgeAttestation[] memory attestations =
             new IValidatorTypes.BridgeAttestation[](5);
         bytes32 bridgeRoot = _generateBridgeMockRoot(8);
@@ -504,11 +501,12 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
         IStakeManagerTypes.SlashParams[] memory equivocators =
             _createEquivicators(validatorAddresses, validatorAddresses.length, 0);
 
-        _finalizeWithMocks(attestations, equivocators, root, FORKA_ID);
+        IValidatorTypes.VerificationParams memory params =
+            _finalizeWithMocks(attestations, equivocators, bridgeRoot, FORKA_ID);
 
         vm.selectFork(FORKA_ID);
-        vm.expectRevert(IValidatorTypes.FinalizationAlreadyProcessed.selector);
-        _finalizeWithMocks(attestations, equivocators, root, FORKA_ID);
+        vm.expectPartialRevert(IValidatorTypes.FinalizationAlreadyProcessed.selector);
+        validatorManagerA.finaliseAttestations(params);
     }
 
     function test_FinalizeSkipsAlreadyInactiveEquivicator() public {
@@ -533,7 +531,6 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
             uint256(IValidatorTypes.ValidatorStatus.Inactive)
         );
 
-        bytes32 root = _generateBridgeMockRoot(2);
         IValidatorTypes.BridgeAttestation[] memory attestations =
             new IValidatorTypes.BridgeAttestation[](5);
         bytes32 bridgeRoot = _generateBridgeMockRoot(9);
@@ -561,7 +558,7 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
         equivocators[0] =
             IStakeManagerTypes.SlashParams({validator: validatorAddresses[0], slashAmount: 1 ether});
 
-        _finalizeWithMocks(attestations, equivocators, root, FORKA_ID);
+        _finalizeWithMocks(attestations, equivocators, bridgeRoot, FORKA_ID);
 
         vm.selectFork(FORKA_ID);
         assertEq(
@@ -582,7 +579,6 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
             _addValidatorToManager(validatorAddresses[index], FORKB_ID);
         }
 
-        bytes32 root = _generateBridgeMockRoot(1);
         IValidatorTypes.BridgeAttestation[] memory attestations =
             new IValidatorTypes.BridgeAttestation[](5);
         bytes32 bridgeRoot = _generateBridgeMockRoot(8);
@@ -613,7 +609,7 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
         IStakeManagerTypes.SlashParams[] memory equivocators =
             _createEquivicators(validatorAddresses, startIndex, slashAmount);
 
-        _finalizeWithMocks(attestations, equivocators, root, FORKA_ID);
+        _finalizeWithMocks(attestations, equivocators, bridgeRoot, FORKA_ID);
         validatorManagerA.distributeRewards();
 
         vm.selectFork(FORKA_ID);
@@ -636,7 +632,6 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
         }
 
         vm.selectFork(FORKB_ID);
-        bytes32 root1 = _generateBridgeMockRoot(1);
         bytes32 bridgeRoot1 = _generateBridgeMockRoot(8);
         IValidatorTypes.BridgeAttestation[] memory attestations1 =
             new IValidatorTypes.BridgeAttestation[](5);
@@ -665,7 +660,7 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
         IStakeManagerTypes.SlashParams[] memory equivocators =
             _createEquivicators(validatorAddresses, jailedStartIndex, slashAmount);
 
-        _finalizeWithMocks(attestations1, equivocators, root1, FORKA_ID);
+        _finalizeWithMocks(attestations1, equivocators, bridgeRoot1, FORKA_ID);
 
         for (uint256 i = jailedStartIndex; i < validatorAddresses.length; i++) {
             IValidatorTypes.ValidatorInfo memory validator =
@@ -685,7 +680,6 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
         vm.warp(block.timestamp + validatorManagerA.EPOCH_DURATION());
         vm.selectFork(FORKB_ID);
 
-        bytes32 root2 = _generateBridgeMockRoot(2);
         bytes32 bridgeRoot2 = _generateBridgeMockRoot(9);
         IValidatorTypes.BridgeAttestation[] memory attestations2 =
             new IValidatorTypes.BridgeAttestation[](3);
@@ -710,7 +704,7 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
         vm.selectFork(FORKA_ID);
         IStakeManagerTypes.SlashParams[] memory noEquivocators =
             new IStakeManagerTypes.SlashParams[](0);
-        _finalizeWithMocks(attestations2, noEquivocators, root2, FORKA_ID);
+        _finalizeWithMocks(attestations2, noEquivocators, bridgeRoot2, FORKA_ID);
 
         validatorManagerA.distributeRewards();
 
@@ -735,7 +729,6 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
         vm.warp(block.timestamp + validatorManagerA.EPOCH_DURATION());
         vm.selectFork(FORKB_ID);
 
-        bytes32 root3 = _generateBridgeMockRoot(3);
         bytes32 bridgeRoot3 = _generateBridgeMockRoot(10);
         IValidatorTypes.BridgeAttestation[] memory attestations3 =
             new IValidatorTypes.BridgeAttestation[](5);
@@ -758,7 +751,7 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
         }
 
         vm.selectFork(FORKA_ID);
-        _finalizeWithMocks(attestations3, noEquivocators, root3, FORKA_ID);
+        _finalizeWithMocks(attestations3, noEquivocators, bridgeRoot3, FORKA_ID);
 
         validatorManagerA.distributeRewards();
 
@@ -797,7 +790,7 @@ contract ValidatorManagerTest is ValidatorManagerBaseTest {
         IStakeManagerTypes.SlashParams[] memory noEquivocators =
             new IStakeManagerTypes.SlashParams[](0);
 
-        _finalizeWithMocks(attestations, noEquivocators, _generateBridgeMockRoot(92), FORKA_ID);
+        _finalizeWithMocks(attestations, noEquivocators, attestations[0].bridgeRoot, FORKA_ID);
 
         assertEq(validatorManagerA.getValidator(alice).attestationCount, 1);
     }

@@ -32,12 +32,19 @@ pub struct RuntimePaths {
 pub struct RuntimeServices {
     pub chain_manager: ChainManagerService,
     pub node_manager: NodeManagerService,
+    pub ui: UiService,
     pub validator: ValidatorService,
     pub sp1: Sp1Service,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ChainManagerService {
+    pub bind: String,
+}
+
+/// Browser UI bind address used to restrict local API origins.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct UiService {
     pub bind: String,
 }
 

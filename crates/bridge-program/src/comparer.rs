@@ -1,6 +1,9 @@
 extern crate alloc;
 
-use alloc::{collections::BTreeMap, vec::Vec};
+use alloc::{
+    collections::{BTreeMap, BTreeSet},
+    vec::Vec,
+};
 use alloy_primitives::{Address, B256, U256};
 
 use crate::{abi, events, mpt, receipt};
@@ -8,6 +11,14 @@ use sp1_types::{AttestationWitness, BatchInput, ZkvmInput};
 use sp1_types::{ProgramError, ProgramResult};
 
 pub fn build_public_values(input: &ZkvmInput) -> ProgramResult<Vec<u8>> {
+    if input.attested_chain_id != input.deposit_batch.chain_id
+        || input.attestations.iter().any(|attestation| {
+            attestation.source_chain_id != input.attested_chain_id
+                || attestation.block_number != input.deposit_batch.block_number
+        })
+    {
+        return Err(ProgramError::BatchShapeMismatch);
+    }
     let (valid_bridge_root, _max_deposit_index) =
         compute_valid_root_from_deposits(&input.deposit_batch)?;
 
@@ -16,8 +27,24 @@ pub fn build_public_values(input: &ZkvmInput) -> ProgramResult<Vec<u8>> {
     let equivocators =
         compute_equivocators(&attestation_records, valid_bridge_root, input.slash_amount);
 
+    let equivocator_addresses: BTreeSet<Address> =
+        equivocators.iter().map(|equivocator| equivocator.validator).collect();
+    let mut honest_state_root = None;
+    for record in attestation_records
+        .iter()
+        .filter(|record| !equivocator_addresses.contains(&record.validator))
+    {
+        if let Some(state_root) = honest_state_root {
+            if record.state_root != state_root {
+                return Err(ProgramError::BatchShapeMismatch);
+            }
+        } else {
+            honest_state_root = Some(record.state_root);
+        }
+    }
     let attestations_out: Vec<crate::abi::BridgeAttestation> = attestation_records
         .into_iter()
+        .filter(|record| !equivocator_addresses.contains(&record.validator))
         .map(|record| crate::abi::BridgeAttestation {
             blockNumber: U256::from(record.block_number),
             bridgeRoot: record.bridge_root.0.into(),
@@ -95,7 +122,11 @@ fn verify_attestations(
 
     let first_chain_id = attestations[0].source_chain_id;
     let first_block_number = attestations[0].block_number;
+    let mut seen_receipts = BTreeSet::new();
     for a in attestations {
+        if !seen_receipts.insert((a.receipts_root, a.tx_index, a.validator)) {
+            return Err(ProgramError::BatchShapeMismatch);
+        }
         if a.source_chain_id != first_chain_id || a.block_number != first_block_number {
             return Err(ProgramError::BatchShapeMismatch);
         }

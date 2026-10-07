@@ -13,7 +13,7 @@ GREEN := \033[0;32m
 YELLOW := \033[0;33m
 RED := \033[0;31m
 NC := \033[0m
-NPM ?= npm
+BUN ?= bun
 
 export ANVIL_PORT_31338
 export ANVIL_PORT_31339
@@ -239,7 +239,7 @@ clippy: check-tools
 
 test:
 	@echo "$(YELLOW)Running tests...$(NC)"
-	@rustup run $(RUST_TOOLCHAIN) cargo test --workspace
+	@rustup run $(RUST_TOOLCHAIN) cargo test --workspace --locked
 	@echo "$(GREEN) Tests passed$(NC)"
 
 clean:
@@ -248,7 +248,8 @@ clean:
 	@rm -rf $(TARGET_DIR)/
 	@echo "$(GREEN) Clean complete$(NC)"
 
-ci: lint clippy test
+ci:
+	@bash scripts/check.sh all
 	@echo "$(GREEN) CI workflow complete$(NC)"
 
 update:
@@ -325,8 +326,8 @@ test-unit:
 test-contracts: deploy-local
 	@echo "$(YELLOW)Running Solidity unit tests...$(NC)"
 	@cargo build -p validator-utils >/dev/null
-	@ETH_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31338)"; \
-		BASE_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31339)"; \
+	@ETH_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31338)"; \
+		BASE_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31339)"; \
 		cd contracts && \
 		ETH_RPC_URL="$$ETH_RPC_URL" \
 		BASE_RPC_URL="$$BASE_RPC_URL" \
@@ -336,8 +337,8 @@ test-contracts: deploy-local
 test-contracts-fuzz: deploy-local
 	@echo "$(YELLOW)Running Solidity fuzz tests...$(NC)"
 	@cargo build -p validator-utils >/dev/null
-	@ETH_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31338)"; \
-		BASE_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31339)"; \
+	@ETH_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31338)"; \
+		BASE_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31339)"; \
 		cd contracts && \
 		ETH_RPC_URL="$$ETH_RPC_URL" \
 			BASE_RPC_URL="$$BASE_RPC_URL" \
@@ -351,8 +352,8 @@ contract-scenario:
 	fi
 	@echo "$(YELLOW)Running Solidity scenario against configured chain RPCs: $(TEST)$(NC)"
 	@cargo build -p validator-utils >/dev/null
-	@ETH_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31338)"; \
-		BASE_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31339)"; \
+	@ETH_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31338)"; \
+		BASE_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31339)"; \
 		cd contracts && \
 		ETH_RPC_URL="$$ETH_RPC_URL" \
 		BASE_RPC_URL="$$BASE_RPC_URL" \
@@ -403,7 +404,7 @@ test-components:
 	@echo "$(YELLOW)Running component tests (chain-manager, sp1-db, indexer TS)...$(NC)"
 	@rustup run $(RUST_TOOLCHAIN) cargo test -p chain-manager
 	@rustup run $(RUST_TOOLCHAIN) cargo test -p sp1-db
-	@cd indexer && $(NPM) run mocha --silent
+	@cd indexer && $(BUN) run --silent mocha
 	@echo "$(GREEN) Component tests passed$(NC)"
 
 ANVIL_KEY := 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
@@ -493,42 +494,42 @@ render-runtime-config: runtime-dirs
 		SP1_INTERVAL_SECS="$(SP1_INTERVAL_SECS)" \
 		RUNTIME_TEMPLATE_CONFIG=$(RUNTIME_TEMPLATE_CONFIG) \
 		RUNTIME_CONFIG=$(RUNTIME_CONFIG) \
-		$(NPM) run scripts:runtime-config --silent -- render --template $(RUNTIME_TEMPLATE_CONFIG) --output $(RUNTIME_CONFIG); \
+		$(BUN) run --silent scripts:runtime-config -- render --template $(RUNTIME_TEMPLATE_CONFIG) --output $(RUNTIME_CONFIG); \
 	fi
 
 update-chains: render-runtime-config
 	@echo "$(YELLOW)Synchronizing configured chains...$(NC)"
-	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:sync-chains --silent -- update
+	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:sync-chains -- update
 	@echo "$(GREEN) Chain metadata synchronized$(NC)"
 
 update-chains-existing: runtime-dirs
 	@echo "$(YELLOW)Synchronizing configured chains...$(NC)"
-	@REUSE_RUNTIME_CONFIG=1 RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:sync-chains --silent -- update
+	@REUSE_RUNTIME_CONFIG=1 RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:sync-chains -- update
 	@echo "$(GREEN) Chain metadata synchronized$(NC)"
 
 remove-chains: render-runtime-config
 	@echo "$(YELLOW)Removing unsupported chains...$(NC)"
-	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:sync-chains --silent -- remove
+	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:sync-chains -- remove
 	@echo "$(GREEN) Unsupported chains removed$(NC)"
 
 generate-stack-compose: render-runtime-config
 	@echo "$(YELLOW)Generating stack docker compose file...$(NC)"
-	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) ANVIL_NO_FORK=$(ANVIL_NO_FORK) $(NPM) run scripts:generate-stack-compose --silent
+	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) ANVIL_NO_FORK=$(ANVIL_NO_FORK) $(BUN) run --silent scripts:generate-stack-compose
 	@echo "$(GREEN) Stack compose generated at $(RUNTIME_ROOT)/docker-compose.generated.yaml$(NC)"
 
 generate-stack-compose-existing:
 	@echo "$(YELLOW)Generating stack docker compose file from existing runtime config...$(NC)"
-	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) ANVIL_NO_FORK=$(ANVIL_NO_FORK) $(NPM) run scripts:generate-stack-compose --silent
+	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) ANVIL_NO_FORK=$(ANVIL_NO_FORK) $(BUN) run --silent scripts:generate-stack-compose
 	@echo "$(GREEN) Stack compose generated at $(RUNTIME_ROOT)/docker-compose.generated.yaml$(NC)"
 
 anvil-up: render-runtime-config
 	@echo "$(YELLOW)Ensuring local Anvil chains are running...$(NC)"
-	@CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
-		ANVIL_STATE_INTERVAL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- anvil-state-interval --config $(RUNTIME_CONFIG))"; \
+	@CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
+		ANVIL_STATE_INTERVAL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- anvil-state-interval --config $(RUNTIME_CONFIG))"; \
 		for chain_id in $$CHAIN_IDS; do \
-			chain_rpc_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
-			chain_port="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-port --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
-			chain_fork_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-fork-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+			chain_rpc_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+			chain_port="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-port --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+			chain_fork_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-fork-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
 			if [ "$(ANVIL_NO_FORK)" = "true" ] || [ "$(ANVIL_NO_FORK)" = "1" ]; then \
 				chain_fork_url=""; \
 			fi; \
@@ -557,16 +558,16 @@ anvil-up: render-runtime-config
 				echo "$(YELLOW) Starting Anvil chain $$chain_id on port $$chain_port$(NC)"; \
 				mkdir -p "$$state_path"; \
 				if [ -n "$$chain_fork_url" ]; then \
-					nohup anvil --port "$$chain_port" --chain-id "$$chain_id" --code-size-limit $(ANVIL_CODE_SIZE_LIMIT) --silent --fork-url "$$chain_fork_url" --state "$$state_path" --state-interval "$$ANVIL_STATE_INTERVAL" > "$$log_file" 2>&1 & echo $$! > "$$pid_file"; \
+					nohup anvil --port "$$chain_port" --chain-id "$$chain_id" --code-size-limit $(ANVIL_CODE_SIZE_LIMIT) --fork-url "$$chain_fork_url" --state "$$state_path" --state-interval "$$ANVIL_STATE_INTERVAL" > "$$log_file" 2>&1 & echo $$! > "$$pid_file"; \
 				else \
-					nohup anvil --port "$$chain_port" --chain-id "$$chain_id" --code-size-limit $(ANVIL_CODE_SIZE_LIMIT) --silent --state "$$state_path" --state-interval "$$ANVIL_STATE_INTERVAL" > "$$log_file" 2>&1 & echo $$! > "$$pid_file"; \
+					nohup anvil --port "$$chain_port" --chain-id "$$chain_id" --code-size-limit $(ANVIL_CODE_SIZE_LIMIT) --state "$$state_path" --state-interval "$$ANVIL_STATE_INTERVAL" > "$$log_file" 2>&1 & echo $$! > "$$pid_file"; \
 				fi; \
 			fi; \
 		done
 	@echo "$(YELLOW)Waiting for all Anvil chains to be ready...$(NC)"; \
-	CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
+	CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
 	for chain_id in $$CHAIN_IDS; do \
-		chain_rpc_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+		chain_rpc_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
 		echo "  Waiting for chain $$chain_id at $$chain_rpc_url..."; \
 		retries=0; \
 		until cast chain-id --rpc-url "$$chain_rpc_url" >/dev/null 2>&1; do \
@@ -582,12 +583,12 @@ anvil-up: render-runtime-config
 
 anvil-up-existing: runtime-dirs
 	@echo "$(YELLOW)Ensuring local Anvil chains are running...$(NC)"
-	@CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
-		ANVIL_STATE_INTERVAL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- anvil-state-interval --config $(RUNTIME_CONFIG))"; \
+	@CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
+		ANVIL_STATE_INTERVAL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- anvil-state-interval --config $(RUNTIME_CONFIG))"; \
 		for chain_id in $$CHAIN_IDS; do \
-			chain_rpc_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
-			chain_port="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-port --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
-			chain_fork_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-fork-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+			chain_rpc_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+			chain_port="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-port --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+			chain_fork_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-fork-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
 			if [ "$(ANVIL_NO_FORK)" = "true" ] || [ "$(ANVIL_NO_FORK)" = "1" ]; then \
 				chain_fork_url=""; \
 			fi; \
@@ -616,16 +617,16 @@ anvil-up-existing: runtime-dirs
 				echo "$(YELLOW) Starting Anvil chain $$chain_id on port $$chain_port$(NC)"; \
 				mkdir -p "$$state_path"; \
 				if [ -n "$$chain_fork_url" ]; then \
-					nohup anvil --port "$$chain_port" --chain-id "$$chain_id" --code-size-limit $(ANVIL_CODE_SIZE_LIMIT) --silent --fork-url "$$chain_fork_url" --state "$$state_path" --state-interval "$$ANVIL_STATE_INTERVAL" > "$$log_file" 2>&1 & echo $$! > "$$pid_file"; \
+					nohup anvil --port "$$chain_port" --chain-id "$$chain_id" --code-size-limit $(ANVIL_CODE_SIZE_LIMIT) --fork-url "$$chain_fork_url" --state "$$state_path" --state-interval "$$ANVIL_STATE_INTERVAL" > "$$log_file" 2>&1 & echo $$! > "$$pid_file"; \
 				else \
-					nohup anvil --port "$$chain_port" --chain-id "$$chain_id" --code-size-limit $(ANVIL_CODE_SIZE_LIMIT) --silent --state "$$state_path" --state-interval "$$ANVIL_STATE_INTERVAL" > "$$log_file" 2>&1 & echo $$! > "$$pid_file"; \
+					nohup anvil --port "$$chain_port" --chain-id "$$chain_id" --code-size-limit $(ANVIL_CODE_SIZE_LIMIT) --state "$$state_path" --state-interval "$$ANVIL_STATE_INTERVAL" > "$$log_file" 2>&1 & echo $$! > "$$pid_file"; \
 				fi; \
 			fi; \
 		done
 	@echo "$(YELLOW)Waiting for all Anvil chains to be ready...$(NC)"; \
-	CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
+	CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
 	for chain_id in $$CHAIN_IDS; do \
-		chain_rpc_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+		chain_rpc_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
 		echo "  Waiting for chain $$chain_id at $$chain_rpc_url..."; \
 		retries=0; \
 		until cast chain-id --rpc-url "$$chain_rpc_url" >/dev/null 2>&1; do \
@@ -645,16 +646,16 @@ deploy-local: anvil-up build-program
 	@PROGRAM_VKEY=$$(cargo prove vkey --elf $(ELF_PATH) | tail -n 1); \
 		DEPLOYER_PRIVATE_KEY=$$(node --input-type=module -e "import { randomBytes } from 'node:crypto'; process.stdout.write('0x' + randomBytes(32).toString('hex'))"); \
 		RUNTIME_CONFIG_ABS="$$(pwd)/$(RUNTIME_CONFIG)"; \
-		DEPLOYMENTS_DIR_ABS="$$(cd "$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- deployments-dir --config $(RUNTIME_CONFIG))" 2>/dev/null && pwd || true)"; \
+		DEPLOYMENTS_DIR_ABS="$$(cd "$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- deployments-dir --config $(RUNTIME_CONFIG))" 2>/dev/null && pwd || true)"; \
 		if [ -z "$$DEPLOYMENTS_DIR_ABS" ]; then \
-			DEPLOYMENTS_DIR_RELATIVE="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- deployments-dir --config $(RUNTIME_CONFIG))"; \
+			DEPLOYMENTS_DIR_RELATIVE="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- deployments-dir --config $(RUNTIME_CONFIG))"; \
 			DEPLOYMENTS_DIR_ABS="$$(pwd)/$$DEPLOYMENTS_DIR_RELATIVE"; \
 		fi; \
-		CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
+		CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
 		echo "$(YELLOW)Using PROGRAM_VKEY=$$PROGRAM_VKEY$(NC)"; \
 		echo "$(YELLOW)Using DEPLOYER_PRIVATE_KEY derived for deterministic cross-chain addresses$(NC)"; \
 		for chain_id in $$CHAIN_IDS; do \
-			chain_rpc_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+			chain_rpc_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
 			echo "$(YELLOW)Deploying bridge stack on chain $$chain_id (rpc=$$chain_rpc_url)...$(NC)"; \
 			( \
 				cd contracts && \
@@ -675,16 +676,16 @@ deploy-local-existing: anvil-up-existing build-program
 	@PROGRAM_VKEY=$$(cargo prove vkey --elf $(ELF_PATH) | tail -n 1); \
 		DEPLOYER_PRIVATE_KEY=$$(node --input-type=module -e "import { randomBytes } from 'node:crypto'; process.stdout.write('0x' + randomBytes(32).toString('hex'))"); \
 		RUNTIME_CONFIG_ABS="$$(pwd)/$(RUNTIME_CONFIG)"; \
-		DEPLOYMENTS_DIR_ABS="$$(cd "$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- deployments-dir --config $(RUNTIME_CONFIG))" 2>/dev/null && pwd || true)"; \
+		DEPLOYMENTS_DIR_ABS="$$(cd "$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- deployments-dir --config $(RUNTIME_CONFIG))" 2>/dev/null && pwd || true)"; \
 		if [ -z "$$DEPLOYMENTS_DIR_ABS" ]; then \
-			DEPLOYMENTS_DIR_RELATIVE="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- deployments-dir --config $(RUNTIME_CONFIG))"; \
+			DEPLOYMENTS_DIR_RELATIVE="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- deployments-dir --config $(RUNTIME_CONFIG))"; \
 			DEPLOYMENTS_DIR_ABS="$$(pwd)/$$DEPLOYMENTS_DIR_RELATIVE"; \
 		fi; \
-		CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
+		CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
 		echo "$(YELLOW)Using PROGRAM_VKEY=$$PROGRAM_VKEY$(NC)"; \
 		echo "$(YELLOW)Using DEPLOYER_PRIVATE_KEY derived for deterministic cross-chain addresses$(NC)"; \
 		for chain_id in $$CHAIN_IDS; do \
-			chain_rpc_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+			chain_rpc_url="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
 			echo "$(YELLOW)Deploying bridge stack on chain $$chain_id (rpc=$$chain_rpc_url)...$(NC)"; \
 			( \
 				cd contracts && \
@@ -709,10 +710,10 @@ upgrade-live-contracts:
 	@cp -R contracts/out/build-info/. "$(UPGRADE_REFERENCE_BUILD_INFO_DIR)"
 	@echo "$(YELLOW)Building upgraded contract implementations...$(NC)"
 	@cd contracts && forge build --quiet
-	@CHAIN_IDS="$$(if [ -n "$(strip $(UPGRADE_CHAIN_ID))" ]; then echo "$(UPGRADE_CHAIN_ID)"; else RUNTIME_CONFIG=$(UPGRADE_RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-ids --config $(UPGRADE_RUNTIME_CONFIG) | tr '\n' ' '; fi)"; \
+	@CHAIN_IDS="$$(if [ -n "$(strip $(UPGRADE_CHAIN_ID))" ]; then echo "$(UPGRADE_CHAIN_ID)"; else RUNTIME_CONFIG=$(UPGRADE_RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-ids --config $(UPGRADE_RUNTIME_CONFIG) | tr '\n' ' '; fi)"; \
 		for chain_id in $$CHAIN_IDS; do \
-			chain_rpc_url="$$(RUNTIME_CONFIG=$(UPGRADE_RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(UPGRADE_RUNTIME_CONFIG) --chain-id $$chain_id)"; \
-			deployment_file="$$(RUNTIME_CONFIG=$(UPGRADE_RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- deployment-file --config $(UPGRADE_RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+			chain_rpc_url="$$(RUNTIME_CONFIG=$(UPGRADE_RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(UPGRADE_RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+			deployment_file="$$(RUNTIME_CONFIG=$(UPGRADE_RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- deployment-file --config $(UPGRADE_RUNTIME_CONFIG) --chain-id $$chain_id)"; \
 			echo "$(YELLOW)Upgrading chain $$chain_id (rpc=$$chain_rpc_url)...$(NC)"; \
 			( \
 				cd contracts && \
@@ -790,7 +791,7 @@ start-runtime-agents: render-runtime-config runtime-dirs build-runtime-binaries
 	@$(MAKE) $(RUNTIME_MAKE_ARGS) --no-print-directory bootstrap-validator-set
 	@$(MAKE) $(RUNTIME_MAKE_ARGS) --no-print-directory _start-node-manager
 	@echo "$(YELLOW)Waiting for node-manager health...$(NC)"
-	@NODE_MANAGER_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- service-url --config $(RUNTIME_CONFIG) --service node_manager)"; \
+	@NODE_MANAGER_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- service-url --config $(RUNTIME_CONFIG) --service node_manager)"; \
 		until curl -fsS "$$NODE_MANAGER_URL/healthz" >/dev/null 2>&1; do sleep 2; done
 	@$(MAKE) $(RUNTIME_MAKE_ARGS) --no-print-directory _start-validators
 	@$(MAKE) $(RUNTIME_MAKE_ARGS) --no-print-directory _start-sp1
@@ -801,10 +802,10 @@ start-local-stack: deploy-local reset-indexer ensure-indexer-ready build-runtime
 	@echo "$(GREEN) Local validator stack is running$(NC)"
 
 check-runtime-deployments: runtime-dirs
-	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:check-runtime-deployments --silent -- --config $(RUNTIME_CONFIG)
+	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:check-runtime-deployments -- --config $(RUNTIME_CONFIG)
 
 docker-up-chains:
-	@CHAIN_SERVICES="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-ids --config $(RUNTIME_CONFIG) | awk '{printf " anvil-%s", $$1}')"; \
+	@CHAIN_SERVICES="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-ids --config $(RUNTIME_CONFIG) | awk '{printf " anvil-%s", $$1}')"; \
 		docker compose -f "$(COMPOSE_FILE)" -p "$(COMPOSE_PROJECT_NAME)" up -d --build $$CHAIN_SERVICES
 
 docker-start-supporting-services:
@@ -812,12 +813,12 @@ docker-start-supporting-services:
 	@$(MAKE) --no-print-directory ensure-indexer-ready-existing
 
 docker-start-runtime-services:
-	@VALIDATOR_SERVICES="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- validator-names --config $(RUNTIME_CONFIG) | awk '{printf " validator-%s", $$1}')"; \
+	@VALIDATOR_SERVICES="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- validator-names --config $(RUNTIME_CONFIG) | awk '{printf " validator-%s", $$1}')"; \
 		docker compose -f "$(COMPOSE_FILE)" -p "$(COMPOSE_PROJECT_NAME)" build validator-set-bootstrap chain-manager node-manager sp1 $$VALIDATOR_SERVICES; \
 		docker compose -f "$(COMPOSE_FILE)" -p "$(COMPOSE_PROJECT_NAME)" run --rm validator-set-bootstrap; \
 		docker compose -f "$(COMPOSE_FILE)" -p "$(COMPOSE_PROJECT_NAME)" up -d chain-manager node-manager sp1 $$VALIDATOR_SERVICES
 	@echo "$(YELLOW)Waiting for node-manager health...$(NC)"
-	@NODE_MANAGER_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- service-url --config $(RUNTIME_CONFIG) --service node_manager)"; \
+	@NODE_MANAGER_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- service-url --config $(RUNTIME_CONFIG) --service node_manager)"; \
 		until curl -fsS "$$NODE_MANAGER_URL/healthz" >/dev/null 2>&1; do sleep 2; done
 
 docker-redeploy: stop-runtime-agents
@@ -896,7 +897,7 @@ smoke-runtime:
 		test -f $(RUNTIME_STATE_DIR)/validators/$$validator.json; \
 		screen -ls | grep -q "[.]$(RUNTIME_SCREEN_PREFIX)-validator-$$validator[[:space:]]"; \
 	done
-	@NODE_MANAGER_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- service-url --config $(RUNTIME_CONFIG) --service node_manager)"; \
+	@NODE_MANAGER_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- service-url --config $(RUNTIME_CONFIG) --service node_manager)"; \
 		curl -fsS "$$NODE_MANAGER_URL/healthz" >/dev/null
 	@echo "$(GREEN) Runtime health checks passed$(NC)"
 
@@ -926,8 +927,8 @@ test-e2e-json: build-program deploy-local verify-indexer-config ensure-indexer-r
 	@echo "$(YELLOW)  Chain state: real Anvil deposits + receipt MPT proofs$(NC)"
 	@echo "$(YELLOW)  Proof:       mock Groth16 (SP1_PROVER=mock, fast dev mode)$(NC)"
 	@mkdir -p "$$(dirname $(REPORT_SCENARIO_JSON))"
-	@CHAIN_1_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31338)"; \
-		BASE_CHAIN_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31339)"; \
+	@CHAIN_1_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31338)"; \
+		BASE_CHAIN_RPC_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-rpc-url --config $(RUNTIME_CONFIG) --chain-id 31339)"; \
 		RPC_URL_31338="$$CHAIN_1_RPC_URL" \
 		RPC_URL_31339="$$BASE_CHAIN_RPC_URL" \
 		SP1_PROVER=mock \
@@ -935,8 +936,8 @@ test-e2e-json: build-program deploy-local verify-indexer-config ensure-indexer-r
 		cargo run -p bridge-script --bin test-bridge --release -- --json-out $(REPORT_SCENARIO_JSON)
 	@echo "$(GREEN) Bridge e2e test passed$(NC)"
 	@echo "$(YELLOW)  Scenario JSON: $(REPORT_SCENARIO_JSON)$(NC)"
-	@CHAIN_1_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-port --config $(RUNTIME_CONFIG) --chain-id 31338)"; \
-		BASE_CHAIN_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-port --config $(RUNTIME_CONFIG) --chain-id 31339)"; \
+	@CHAIN_1_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-port --config $(RUNTIME_CONFIG) --chain-id 31338)"; \
+		BASE_CHAIN_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-port --config $(RUNTIME_CONFIG) --chain-id 31339)"; \
 		echo "$(YELLOW)  Anvil nodes left running on ports $$CHAIN_1_PORT and $$BASE_CHAIN_PORT for indexer use.$(NC)"
 	@echo "$(YELLOW)  Run 'make kill-anvil' when done.$(NC)"
 
@@ -948,15 +949,15 @@ test-live-bridge: ensure-local-stack
 	@cargo run -p bridge-script --bin exercise-bridge --release -- --config $(RUNTIME_CONFIG) --asset native --json-out $(LIVE_BRIDGE_REPORT_JSON)
 	@echo "$(GREEN) Live bridge deposit and claim completed$(NC)"
 	@echo "$(YELLOW)  Live bridge report: $(LIVE_BRIDGE_REPORT_JSON)$(NC)"
-	@CHAIN_1_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-port --config $(RUNTIME_CONFIG) --chain-id 31338)"; \
-		BASE_CHAIN_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-port --config $(RUNTIME_CONFIG) --chain-id 31339)"; \
+	@CHAIN_1_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-port --config $(RUNTIME_CONFIG) --chain-id 31338)"; \
+		BASE_CHAIN_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-port --config $(RUNTIME_CONFIG) --chain-id 31339)"; \
 		echo "$(YELLOW)  Runtime left running on chain ports $$CHAIN_1_PORT and $$BASE_CHAIN_PORT for the UI.$(NC)"
 
 kill-anvil: render-runtime-config
-	@CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
+	@CHAIN_IDS="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-ids --config $(RUNTIME_CONFIG) | tr '\n' ' ')"; \
 		echo "$(YELLOW)Stopping managed Anvil instances for runtime $(RUNTIME_CONFIG)...$(NC)"; \
 		for chain_id in $$CHAIN_IDS; do \
-			chain_port="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- chain-port --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
+			chain_port="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- chain-port --config $(RUNTIME_CONFIG) --chain-id $$chain_id)"; \
 			pid_file="$(RUNTIME_PID_DIR)/anvil-$$chain_id.pid"; \
 			if [ -f "$$pid_file" ]; then \
 				kill "$$(cat "$$pid_file")" 2>/dev/null || true; \
@@ -981,35 +982,35 @@ bridge: upgrade-safety-check test-contracts test-contracts-fuzz test-components 
 
 bridge-report:
 	@echo "$(YELLOW)Running bridge validation report pipeline...$(NC)"
-	@$(NPM) run scripts:run-bridge-validation --silent
+	@$(BUN) run --silent scripts:run-bridge-validation
 	@echo "$(GREEN) Bridge report generated$(NC)"
 
 ui-dev:
 	@echo "$(YELLOW)Starting swap UI...$(NC)"
-	@cd apps/web && $(NPM) run dev
+	@cd apps/web && $(BUN) run --silent dev
 
 ui-test:
 	@echo "$(YELLOW)Running swap UI tests...$(NC)"
-	@cd apps/web && $(NPM) run test --silent
-	@cd apps/web && $(NPM) run test:e2e --silent
+	@cd apps/web && $(BUN) run --silent test
+	@cd apps/web && $(BUN) run --silent test:e2e
 	@echo "$(GREEN) UI tests passed$(NC)"
 
 update-indexer-config: render-runtime-config
 	@echo "$(YELLOW)Updating indexer config with local contract addresses...$(NC)"
-	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:update-indexer-config --silent
+	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:update-indexer-config
 	@echo "$(GREEN) indexer/config.yaml updated$(NC)"
 
 verify-indexer-config: render-runtime-config
 	@echo "$(YELLOW)Verifying indexer config addresses match deploy artifacts...$(NC)"
-	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:verify-indexer-config --silent
+	@RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:verify-indexer-config
 	@echo "$(GREEN) indexer/config.yaml is synchronized$(NC)"
 
 restart-indexer: render-runtime-config
 	@echo "$(YELLOW)Restarting Envio indexer...$(NC)"
-	@HASURA_EXTERNAL_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- indexer-port --config $(RUNTIME_CONFIG))"; \
+	@HASURA_EXTERNAL_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- indexer-port --config $(RUNTIME_CONFIG))"; \
 		INDEXER_PROJECT_NAME="bridge-indexer-$$HASURA_EXTERNAL_PORT"; \
 		cd indexer && HASURA_EXTERNAL_PORT=$$HASURA_EXTERNAL_PORT docker compose -p $$INDEXER_PROJECT_NAME up -d --build
-	@HASURA_EXTERNAL_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- indexer-port --config $(RUNTIME_CONFIG))"; \
+	@HASURA_EXTERNAL_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- indexer-port --config $(RUNTIME_CONFIG))"; \
 		INDEXER_PROJECT_NAME="bridge-indexer-$$HASURA_EXTERNAL_PORT"; \
 		cd indexer && HASURA_EXTERNAL_PORT=$$HASURA_EXTERNAL_PORT docker compose -p $$INDEXER_PROJECT_NAME ps
 	@echo "$(YELLOW)Waiting 60 s for indexer to process events...$(NC)"
@@ -1018,13 +1019,13 @@ restart-indexer: render-runtime-config
 
 reset-indexer: render-runtime-config
 	@echo "$(YELLOW)Resetting Envio indexer state...$(NC)"
-	@HASURA_EXTERNAL_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- indexer-port --config $(RUNTIME_CONFIG))"; \
+	@HASURA_EXTERNAL_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- indexer-port --config $(RUNTIME_CONFIG))"; \
 		INDEXER_PROJECT_NAME="bridge-indexer-$$HASURA_EXTERNAL_PORT"; \
 		cd indexer && HASURA_EXTERNAL_PORT=$$HASURA_EXTERNAL_PORT docker compose -p $$INDEXER_PROJECT_NAME down -v
-	@HASURA_EXTERNAL_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- indexer-port --config $(RUNTIME_CONFIG))"; \
+	@HASURA_EXTERNAL_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- indexer-port --config $(RUNTIME_CONFIG))"; \
 		INDEXER_PROJECT_NAME="bridge-indexer-$$HASURA_EXTERNAL_PORT"; \
 		cd indexer && HASURA_EXTERNAL_PORT=$$HASURA_EXTERNAL_PORT docker compose -p $$INDEXER_PROJECT_NAME up -d --build
-	@HASURA_EXTERNAL_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- indexer-port --config $(RUNTIME_CONFIG))"; \
+	@HASURA_EXTERNAL_PORT="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- indexer-port --config $(RUNTIME_CONFIG))"; \
 		INDEXER_PROJECT_NAME="bridge-indexer-$$HASURA_EXTERNAL_PORT"; \
 		cd indexer && HASURA_EXTERNAL_PORT=$$HASURA_EXTERNAL_PORT docker compose -p $$INDEXER_PROJECT_NAME ps
 	@echo "$(YELLOW)Waiting 60 s for fresh indexer startup...$(NC)"
@@ -1038,9 +1039,9 @@ reset-runtime-state: runtime-dirs
 
 ensure-indexer-ready: render-runtime-config
 	@echo "$(YELLOW)Polling Hasura until indexer is query-ready...$(NC)"
-	@HASURA_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- indexer-url --config $(RUNTIME_CONFIG))"; \
+	@HASURA_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- indexer-url --config $(RUNTIME_CONFIG))"; \
 		HASURA_SECRET="$${HASURA_SECRET:-$${HASURA_GRAPHQL_ADMIN_SECRET:-testing}}"; \
-		$(NPM) run scripts:wait-indexer-ready --silent -- \
+		$(BUN) run --silent scripts:wait-indexer-ready -- \
 		--url "$$HASURA_URL" \
 		--secret "$$HASURA_SECRET" \
 		--timeout-ms 180000 \
@@ -1049,9 +1050,9 @@ ensure-indexer-ready: render-runtime-config
 
 ensure-indexer-ready-existing: runtime-dirs
 	@echo "$(YELLOW)Polling Hasura until indexer is query-ready...$(NC)"
-	@HASURA_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(NPM) run scripts:runtime-config --silent -- indexer-url --config $(RUNTIME_CONFIG))"; \
+	@HASURA_URL="$$(RUNTIME_CONFIG=$(RUNTIME_CONFIG) $(BUN) run --silent scripts:runtime-config -- indexer-url --config $(RUNTIME_CONFIG))"; \
 		HASURA_SECRET="$${HASURA_SECRET:-$${HASURA_GRAPHQL_ADMIN_SECRET:-testing}}"; \
-		$(NPM) run scripts:wait-indexer-ready --silent -- \
+		$(BUN) run --silent scripts:wait-indexer-ready -- \
 		--url "$$HASURA_URL" \
 		--secret "$$HASURA_SECRET" \
 		--timeout-ms 180000 \

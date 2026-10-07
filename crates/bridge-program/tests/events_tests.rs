@@ -1,10 +1,8 @@
-mod helpers;
 use alloy_primitives::{keccak256, Address, B256, U256};
 use bridge_program::{
     events::{extract_attestation_submitted, validate_deposit_log},
     receipt::Log,
 };
-use helpers::concat;
 use sp1_types::{
     DepositExpectation, FieldAddress, FieldB256, FieldLocation, FieldU256, FieldU64, ProgramError,
 };
@@ -216,11 +214,9 @@ fn make_attestation_log(
     let mut timestamp_data = [0u8; 32];
     timestamp_data[24..].copy_from_slice(&timestamp.to_be_bytes());
 
-    let data = concat(&[
-        block_number_data.to_vec(),
-        state_root.as_slice().to_vec(),
-        timestamp_data.to_vec(),
-    ]);
+    let data =
+        [block_number_data.to_vec(), state_root.as_slice().to_vec(), timestamp_data.to_vec()]
+            .concat();
 
     Log {
         address: validator_manager,
@@ -282,4 +278,24 @@ fn attestation_wrong_topic0_is_error() {
         extract_attestation_submitted(&[log], vm),
         Err(ProgramError::AttestationLogNotFound)
     );
+}
+
+proptest::proptest! {
+    #[test]
+    fn overflowing_attestation_integers_return_field_errors(
+        high_byte in 1u8..=255,
+        field in 0u8..3,
+        low_value in proptest::prelude::any::<u64>(),
+    ) {
+        let manager = Address::from([0x10; 20]);
+        let mut log = make_attestation_log(manager, Address::ZERO, low_value, B256::ZERO,
+            low_value, B256::ZERO, low_value);
+        match field {
+            0 => { let mut topic = log.topics[2].0; topic[0] = high_byte; log.topics[2] = topic.into(); }
+            1 => log.data[0] = high_byte,
+            _ => log.data[64] = high_byte,
+        }
+        proptest::prop_assert_eq!(extract_attestation_submitted(&[log], manager),
+            Err(ProgramError::AttestationFieldMismatch));
+    }
 }

@@ -39,9 +39,13 @@ fn read_u64(loc: &FieldLocation, topics: &[B256], data: &[u8]) -> ProgramResult<
     match *loc {
         FieldLocation::Topic(i) => {
             let t = topics.get(i as usize).ok_or(ProgramError::DepositFieldMismatch)?;
-            Ok(U256::from_be_slice(t.as_slice()).to::<u64>())
+            U256::from_be_slice(t.as_slice())
+                .try_into()
+                .map_err(|_| ProgramError::DepositFieldMismatch)
         }
-        FieldLocation::DataWord(i) => Ok(u256_from_word(word_at(data, i)?).to::<u64>()),
+        FieldLocation::DataWord(i) => u256_from_word(word_at(data, i)?)
+            .try_into()
+            .map_err(|_| ProgramError::DepositFieldMismatch),
     }
 }
 
@@ -126,15 +130,21 @@ pub fn extract_attestation_submitted(
         }
 
         let validator = address_from_topic(log.topics[1]);
-        let chain_id = U256::from_be_slice(log.topics[2].as_slice()).to::<u64>();
+        let chain_id = U256::from_be_slice(log.topics[2].as_slice())
+            .try_into()
+            .map_err(|_| ProgramError::AttestationFieldMismatch)?;
         let bridge_root = log.topics[3];
 
         if log.data.len() != 96 {
             return Err(ProgramError::AttestationFieldMismatch);
         }
-        let block_number = U256::from_be_slice(&log.data[0..32]).to::<u64>();
+        let block_number = U256::from_be_slice(&log.data[0..32])
+            .try_into()
+            .map_err(|_| ProgramError::AttestationFieldMismatch)?;
         let state_root = B256::from_slice(&log.data[32..64]);
-        let timestamp = U256::from_be_slice(&log.data[64..96]).to::<u64>();
+        let timestamp = U256::from_be_slice(&log.data[64..96])
+            .try_into()
+            .map_err(|_| ProgramError::AttestationFieldMismatch)?;
 
         return Ok((validator, chain_id, bridge_root, block_number, state_root, timestamp));
     }

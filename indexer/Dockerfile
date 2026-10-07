@@ -6,13 +6,12 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /app/base-template
 
-RUN npm install -g npm@latest
 RUN corepack enable
-RUN npm install --global pnpm
+RUN corepack prepare pnpm@10.17.1 --activate
 
 COPY . .
 
-RUN pnpm install --force --config.confirmModulesPurge=false
+RUN pnpm install --frozen-lockfile
 RUN pnpm envio codegen
 
 RUN chmod +x envio-entrypoint.sh

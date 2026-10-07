@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {IStakeManagerTypes} from "./IStakeManagerTypes.sol";
 
@@ -17,15 +17,19 @@ interface IStakeManager is IStakeManagerTypes {
     /// @notice Stake tokens to become a validator
     /// @param params Staking parameters including BLS public key and stake amount
     /// @param proof BLS ownership proof demonstrating control of the public key
-    /// @dev Requires prior token approval and minimum stake amount
+    /// @dev Requires prior token approval, exact token receipt, and minimum initial stake.
+    ///      Top-ups preserve the initial timestamp and are unavailable during pending exits.
     function stake(StakeParams calldata params, BlsOwnerShip memory proof) external;
 
     /// @notice Begin the unstaking process for a validator
+    /// @dev Active validators enter cooldown. Inactive validators may exit immediately.
+    ///      Principal and accrued rewards remain separate until payout.
     /// @param params see {IStakeManagerTypes.UnstakingParams}
     function beginUnstaking(UnstakingParams memory params) external;
 
     /// @notice Complete unstaking and withdraw tokens after cooldown period
-    /// @dev Can only be called after minUnstakeDelay has elapsed
+    /// @dev Active exits require minUnstakeDelay. Full exits pay principal and all rewards,
+    ///      then burn the NFT. Partial exits pay only principal and restore active status.
     function completeUnstaking() external;
 
     /// @notice Update staking configuration parameters
@@ -53,11 +57,13 @@ interface IStakeManager is IStakeManagerTypes {
 
     /// @notice Distribute rewards to active validators
     /// @param params Reward distribution parameters containing total amount and recipients
-    /// @dev Only callable by validator manager, uses epoch-based reward calculation
+    /// @dev Only callable by validator manager. Each allocated reward, including bonuses,
+    ///      must be backed by unallocated token reserves; insufficient funding reverts atomically.
     function distributeRewards(RewardsParams calldata params) external;
 
     /// @notice Claim accumulated rewards as a validator
-    /// @dev Transfers all pending rewards to the caller
+    /// @dev Transfers all pending rewards to the caller and reduces reserves and allocated
+    ///      liabilities before the token call. Principal remains unavailable for reward payouts.
     function claimRewards() external;
 
     /// @notice Allows for pausing contract operations
@@ -93,7 +99,9 @@ interface IStakeManager is IStakeManagerTypes {
     ///@dev Only owner can make this call
     function transferToken(address token, uint256 amount) external;
 
-    /// @notice Withdraw surplus not committed to principal/pending/accrued reserves
+    /// @notice Withdraw surplus not committed to principal or funded reward reserves
+    /// @dev Owner-only. Total token assets must cover principal plus all reward funding,
+    ///      including allocated liabilities. Only the remaining surplus may be transferred.
     /// @param token ERC20 token
     /// @param amount Max amount to withdraw
     function sweepExcess(address token, uint256 amount) external;
