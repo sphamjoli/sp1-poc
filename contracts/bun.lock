@@ -6,7 +6,7 @@
       "name": "contracts",
       "devDependencies": {
         "@openzeppelin/upgrades-core": "1.46.0",
-        "@prb/math": "^4.1.0",
+        "@prb/math": "^4.2.0",
         "@solarity/solidity-lib": "^3.2.0",
         "@types/node": "^24.1.0",
         "solhint": "^6.0.1",
@@ -46,7 +46,7 @@
 
     "@pnpm/npm-conf": ["@pnpm/npm-conf@2.3.1", "", { "dependencies": { "@pnpm/config.env-replace": "^1.1.0", "@pnpm/network.ca-file": "^1.0.1", "config-chain": "^1.1.11" } }, "sha512-c83qWb22rNRuB0UaVCI0uRPNRr8Z0FWnEIvT47jiHAmOIUHbBOg5XvV7pM5x+rKn9HRpjxquDbXYSXr3fAKFcw=="],
 
-    "@prb/math": ["@prb/math@4.1.0", "", {}, "sha512-ef5Xrlh3BeX4xT5/Wi810dpEPq2bYPndRxgFIaKSU1F/Op/s8af03kyom+mfU7gEpvfIZ46xu8W0duiHplbBMg=="],
+    "@prb/math": ["@prb/math@4.2.0", "", {}, "sha512-6ghwaW/w8r6h8I2b6e14yLNz/T7JutAxa2nGv50KslyJX0dx3fFO1zJA8ZwlOObcKcL/VBtmZzgkST71w31r2w=="],
 
     "@scure/base": ["@scure/base@1.2.6", "", {}, "sha512-g/nm5FgUa//MCj1gV09zTJTaM6KBAHqLN907YVQqf7zC49+DcO4B1so4ZX07Ef10Twr6nuqYEH9GEggFXA4Fmg=="],
 
