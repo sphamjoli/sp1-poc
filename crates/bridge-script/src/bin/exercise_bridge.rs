@@ -1,3 +1,5 @@
+//! Development command for exercising bridge deposits and validator settlement against configured EVM deployments.
+
 use alloy::{
     network::TransactionBuilder,
     primitives::{Address, B256, U256},

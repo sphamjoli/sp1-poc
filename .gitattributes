@@ -1,0 +1,4 @@
+# Dependencies and generated protocol bindings are not project-owned source.
+contracts/lib/** linguist-vendored
+indexer/generated/** linguist-generated
+apps/web/src/generated/** linguist-generated

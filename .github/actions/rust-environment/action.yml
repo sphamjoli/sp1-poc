@@ -1,0 +1,17 @@
+name: Rust and SP1 environment
+description: Install pinned SP1 and Foundry tools and cache Cargo inputs
+runs:
+  using: composite
+  steps:
+    - name: Native build dependencies
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y clang libssl-dev pkg-config
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+    - name: Install pinned SP1 compiler
+      shell: bash
+      run: |
+        bash scripts/install-sp1.sh
+        echo "$HOME/.sp1/bin" >> "$GITHUB_PATH"
+    - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09
+      with:
+        version: v1.3.5

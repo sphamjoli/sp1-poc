@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {IValidatorTypes} from "../validator/IValidatorTypes.sol";
 
@@ -88,13 +88,15 @@ interface IStakeManagerTypes {
     /// @param stakingManagerVersions Map of version hash to config
     /// @param rewardReserves Token reserves available for rewards
     /// @param principal Total staked principal per token
+    /// @param accruedRewards Allocated reward liabilities per token
     /// @param __gap Reserved for future storage
     struct SmStorage {
         mapping(address validator => ValidatorBalance balance) balances;
         mapping(bytes32 version => StakeManagerConfig config) stakingManagerVersions;
         mapping(address token => uint256) rewardReserves;
         mapping(address token => uint256) principal;
-        uint256[49] __gap;
+        mapping(address token => uint256) accruedRewards;
+        uint256[48] __gap;
     }
 
     /// @notice Parameters for slashing

@@ -1,16 +1,13 @@
-mod helpers;
+#[path = "common/rlp.rs"]
+mod rlp_helpers;
 use bridge_program::receipt::parse_receipt_logs;
-use helpers::{build_receipt_with_log, concat, rlp_list, rlp_string};
+use rlp_helpers as helpers;
+#[path = "common/receipt.rs"]
+mod receipt_helpers;
+use helpers::{concat, rlp_list, rlp_string};
+use receipt_helpers::build_receipt_with_log;
 
 // ---- helpers ----
-
-fn zero_topic() -> [u8; 32] {
-    [0u8; 32]
-}
-
-fn zero_address() -> [u8; 20] {
-    [0u8; 20]
-}
 
 /// Build a receipt with zero logs.
 fn empty_receipt() -> Vec<u8> {

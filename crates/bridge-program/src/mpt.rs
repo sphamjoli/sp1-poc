@@ -45,6 +45,9 @@ fn decode_compact_path(compact: &[u8]) -> ProgramResult<(Vec<u8>, bool)> {
     let first_nibble = (compact[0] >> 4) & 0x0f;
     let second_nibble = compact[0] & 0x0f;
 
+    if first_nibble > 3 || (first_nibble & 1 == 0 && second_nibble != 0) {
+        return Err(ProgramError::TriePathMismatch);
+    }
     let is_leaf = (first_nibble & 0x2) != 0;
     let is_odd = (first_nibble & 0x1) != 0;
 
@@ -77,7 +80,15 @@ fn child_ref_matches(child_ref: &[u8], child_node_rlp: &[u8]) -> bool {
     }
 }
 
-/// Verify receipt inclusion in the receipts trie under (rlp(tx_index)).
+/// Verifies receipt inclusion in the receipts trie under `rlp(tx_index)`.
+///
+/// Every supplied node must be consumed. Branches and non-empty extensions
+/// consume at least one key nibble, bounding the proof to at most 19 nodes for
+/// a `u64` transaction index. Receipt and individual node byte lengths remain
+/// the caller's resource responsibility.
+///
+/// # Errors
+/// Returns a proof, path, value or RLP error for an invalid inclusion witness.
 pub fn verify_receipt_inclusion(
     receipts_root: B256,
     tx_index: u64,
@@ -95,11 +106,19 @@ pub fn verify_receipt_inclusion(
 
     let key_rlp = rlp_encode_u64(tx_index);
     let key_nibbles = bytes_to_nibbles(&key_rlp);
+    // Each branch or non-empty extension consumes at least one key nibble;
+    // only the terminal leaf may consume none. A u64 index has at most 18 nibbles.
+    if proof_nodes_rlp.len() > key_nibbles.len() + 1 {
+        return Err(ProgramError::ProofNodeMismatch);
+    }
     let mut key_pos = 0usize;
 
     for i in 0..proof_nodes_rlp.len() {
         let node_rlp = &proof_nodes_rlp[i];
-        let (node_item, _) = parse_item(node_rlp, 0)?;
+        let (node_item, next) = parse_item(node_rlp, 0)?;
+        if next != node_rlp.len() {
+            return Err(ProgramError::RlpTrailingBytes);
+        }
         if !node_item.is_list {
             return Err(ProgramError::TrieNodeShapeUnexpected);
         }
@@ -109,6 +128,9 @@ pub fn verify_receipt_inclusion(
             if key_pos == key_nibbles.len() {
                 if items[16].payload != receipt_envelope {
                     return Err(ProgramError::TrieLeafValueMismatch);
+                }
+                if i + 1 != proof_nodes_rlp.len() {
+                    return Err(ProgramError::ProofNodeMismatch);
                 }
                 return Ok(());
             }
@@ -134,6 +156,9 @@ pub fn verify_receipt_inclusion(
 
         if items.len() == 2 {
             let (path_nibbles, is_leaf) = decode_compact_path(items[0].payload)?;
+            if !is_leaf && path_nibbles.is_empty() {
+                return Err(ProgramError::TriePathMismatch);
+            }
 
             if key_pos + path_nibbles.len() > key_nibbles.len() {
                 return Err(ProgramError::TriePathMismatch);
@@ -149,6 +174,9 @@ pub fn verify_receipt_inclusion(
                 }
                 if items[1].payload != receipt_envelope {
                     return Err(ProgramError::TrieLeafValueMismatch);
+                }
+                if i + 1 != proof_nodes_rlp.len() {
+                    return Err(ProgramError::ProofNodeMismatch);
                 }
                 return Ok(());
             }

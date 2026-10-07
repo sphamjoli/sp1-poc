@@ -1,0 +1,35 @@
+name: Bug report
+description: Report incorrect behaviour in the proof program, runtime, contracts, UI, indexer or tooling.
+labels: ["type: bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: State the incorrect behaviour directly.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands, chain IDs, prover mode and input. Remove secrets before sharing.
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Rust/SP1/Foundry/Bun versions, chain IDs and prover mode.
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: Verbatim command output or verdicts.
+      render: shell

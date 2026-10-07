@@ -1,6 +1,9 @@
 use eyre::{Context, ContextCompat, Result};
 use serde::{Deserialize, Serialize};
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 use url::Url;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -32,12 +35,19 @@ pub struct RuntimePaths {
 pub struct RuntimeServices {
     pub chain_manager: ChainManagerService,
     pub node_manager: NodeManagerService,
+    pub ui: UiService,
     pub validator: ValidatorService,
     pub sp1: Sp1Service,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ChainManagerService {
+    pub bind: String,
+}
+
+/// Browser UI bind address used to restrict local API origins.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct UiService {
     pub bind: String,
 }
 
@@ -83,7 +93,7 @@ pub struct BootstrapConfig {
 }
 
 impl RuntimeConfig {
-    pub fn read(path: &PathBuf) -> Result<Self> {
+    pub fn read(path: &Path) -> Result<Self> {
         let bytes =
             fs::read(path).wrap_err_with(|| format!("failed to read {}", path.display()))?;
         let mut runtime_config: Self = serde_json::from_slice(&bytes)
@@ -93,7 +103,7 @@ impl RuntimeConfig {
         Ok(runtime_config)
     }
 
-    fn load_chain_configs(&mut self, config_path: &PathBuf) -> Result<()> {
+    fn load_chain_configs(&mut self, config_path: &Path) -> Result<()> {
         if !self.chains.is_empty() {
             return Ok(());
         }
@@ -262,9 +272,9 @@ fn replace_url_port(url: &str, port: &str) -> Result<String> {
     Ok(parsed_url.to_string())
 }
 
-fn resolve_configured_path(config_path: &PathBuf, configured_path: &PathBuf) -> PathBuf {
+fn resolve_configured_path(config_path: &Path, configured_path: &Path) -> PathBuf {
     if configured_path.is_absolute() {
-        return configured_path.clone();
+        return configured_path.to_path_buf();
     }
 
     let current_directory = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
@@ -283,7 +293,7 @@ fn resolve_configured_path(config_path: &PathBuf, configured_path: &PathBuf) -> 
     config_path
         .parent()
         .map(|parent_directory| parent_directory.join(configured_path))
-        .unwrap_or_else(|| configured_path.clone())
+        .unwrap_or_else(|| configured_path.to_path_buf())
 }
 
 fn find_workspace_root(starting_directory: Option<&std::path::Path>) -> Option<PathBuf> {

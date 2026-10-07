@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {IBridgeTypes} from "./BridgeTypes.sol";
 import {LocalExitTreeLib, SparseMerkleTree} from "../libs/LocalExitTreeLib.sol";
@@ -92,41 +92,6 @@ abstract contract BridgeStorage is IBridgeTypes {
         return depositTree.getProof(depositIndex);
     }
 
-    /// @notice Generate proof for a claim
-    /// @param claimIndex Index of the claim
-    /// @return proof Merkle proof for the claim
-    function generateClaimProof(uint256 claimIndex)
-        internal
-        view
-        returns (SparseMerkleTree.Proof memory proof)
-    {
-        return claimTree.getProof(claimIndex);
-    }
-
-    /// @notice Check if a deposit exists
-    /// @param depositIndex Index to check
-    /// @return exists Whether the deposit exists
-    /// @return value The deposit leaf value
-    function checkDepositExists(uint256 depositIndex)
-        internal
-        view
-        returns (bool exists, bytes32 value)
-    {
-        return depositTree.checkLeafExists(depositIndex);
-    }
-
-    /// @notice Check if a claim exists
-    /// @param claimIndex Index to check
-    /// @return exists Whether the claim exists
-    /// @return value The claim leaf value
-    function checkClaimExists(uint256 claimIndex)
-        internal
-        view
-        returns (bool exists, bytes32 value)
-    {
-        return claimTree.checkLeafExists(claimIndex);
-    }
-
     /// @notice Check if deposit has been claimed
     /// @param sourceChain Source chain ID
     /// @param depositIndex Deposit index to check
@@ -151,11 +116,5 @@ abstract contract BridgeStorage is IBridgeTypes {
         bytes32 claimKey = keccak256(abi.encode(sourceChain, depositIndex));
         Storage storage $ = loadStorage();
         $.claimed[claimKey] = true;
-    }
-
-    /// @notice Get Bridge storage key
-    /// @return Storage position key
-    function getStorageKey() internal pure returns (bytes32) {
-        return BRIDGE_STORAGE_SLOT;
     }
 }

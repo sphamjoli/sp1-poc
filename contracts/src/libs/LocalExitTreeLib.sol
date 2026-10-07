@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {SparseMerkleTree} from "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
 import {IBridgeTypes} from "../bridge/BridgeTypes.sol";
@@ -128,19 +128,7 @@ library LocalExitTreeLib {
         pure
         returns (bytes32 exitLeaf)
     {
-        assembly {
-            let pointer := mload(0x40)
-            mstore(pointer, mload(params))
-            // @dev we use 10 here since we need to keep space for
-            // storing the results of keccak256
-            let length := mul(9, 0x20)
-            for { let i := 0x20 } lt(i, length) { i := add(i, 0x20) } {
-                mstore(add(pointer, i), mload(add(params, 0x20)))
-            }
-
-            exitLeaf := keccak256(pointer, length)
-            mstore(0x40, add(pointer, length))
-        }
+        return keccak256(abi.encode(params));
     }
     /// @notice Check if a leaf exists in the tree
     /// @param tree The SMT storage reference

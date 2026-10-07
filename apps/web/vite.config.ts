@@ -1,9 +1,13 @@
 import { defineConfig } from "vitest/config";
 import vue from "@vitejs/plugin-vue";
+import tailwindcss from "@tailwindcss/postcss";
 import path from "node:path";
 
 export default defineConfig({
   plugins: [vue()],
+  css: {
+    postcss: { plugins: [tailwindcss()] },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

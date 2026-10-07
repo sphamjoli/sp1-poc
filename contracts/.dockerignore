@@ -1,0 +1,10 @@
+.git
+node_modules
+lib
+out
+cache
+broadcast
+.env
+.env.*
+build
+*.tsbuildinfo

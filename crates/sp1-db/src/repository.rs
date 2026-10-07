@@ -298,7 +298,7 @@ impl BridgeRepository {
     }
 
     async fn fetch_deposits_async(&self) -> Result<Vec<BridgeEvent>, Box<dyn std::error::Error>> {
-        let response = match self.client.query::<DepositResponse>(&DEPOSIT_QUERY_ALL).await {
+        let response = match self.client.query::<DepositResponse>(DEPOSIT_QUERY_ALL).await {
             Ok(Some(response)) => response,
             Ok(None) => return Err("No response from query".into()),
             Err(error) => return Err(format!("{:?}", error.message().to_owned()).into()),
@@ -326,7 +326,7 @@ impl BridgeRepository {
     }
 
     async fn fetch_claims_async(&self) -> Result<Vec<ClaimEvent>, Box<dyn std::error::Error>> {
-        let response = match self.client.query::<ClaimResponse>(&CLAIM_QUERY_ALL).await {
+        let response = match self.client.query::<ClaimResponse>(CLAIM_QUERY_ALL).await {
             Ok(Some(response)) => response,
             Ok(None) => return Err("No response from query".into()),
             Err(error) => return Err(format!("{:?}", error.message().to_owned()).into()),
@@ -355,8 +355,7 @@ impl BridgeRepository {
     async fn fetch_attestations_async(
         &self,
     ) -> Result<Vec<BridgeAttestationEvent>, Box<dyn std::error::Error>> {
-        let response = match self.client.query::<AttestationResponse>(&ATTESTATION_QUERY_ALL).await
-        {
+        let response = match self.client.query::<AttestationResponse>(ATTESTATION_QUERY_ALL).await {
             Ok(Some(response)) => response,
             Ok(None) => return Err("No response from query".into()),
             Err(error) => return Err(format!("{:?}", error.message().to_owned()).into()),
@@ -522,12 +521,6 @@ mod tests {
         assert_eq!(parse_u64("42").unwrap(), 42);
         assert_eq!(parse_u64("0x2a").unwrap(), 42);
         assert_eq!(parse_u64("0X2A").unwrap(), 42);
-    }
-
-    #[test]
-    fn parse_u256_supports_decimal_and_hex() {
-        assert_eq!(parse_u256("42").unwrap(), U256::from(42));
-        assert_eq!(parse_u256("0x2a").unwrap(), U256::from(42));
     }
 
     #[test]

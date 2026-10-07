@@ -1,3 +1,5 @@
+//! Print the verification key for the currently compiled bridge guest. Rebuild and update deployed verifier configuration whenever the guest changes.
+
 use sp1_sdk::{include_elf, HashableKey, Prover, ProverClient};
 
 /// The ELF (executable and linkable format) file for the Succinct RISC-V zkVM.

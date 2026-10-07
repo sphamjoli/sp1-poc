@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {IStakeManagerTypes} from "./IStakeManagerTypes.sol";
 
@@ -18,11 +18,5 @@ abstract contract StakeManagerStorage is IStakeManagerTypes {
         assembly {
             $.slot := position
         }
-    }
-
-    /// @notice Get StakeManager storage key
-    /// @return Storage position key
-    function _getStorageKey() internal pure returns (bytes32) {
-        return SM_STORAGE_SLOT;
     }
 }

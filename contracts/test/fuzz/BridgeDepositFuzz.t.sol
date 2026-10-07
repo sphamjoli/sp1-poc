@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {BridgeBaseTest} from "../base/BridgeBase.t.sol";
 
@@ -8,7 +8,9 @@ contract BridgeDepositFuzzTest is BridgeBaseTest {
         uint96 rawAmount,
         uint32 destinationChain,
         address recipient
-    ) public {
+    )
+        public
+    {
         vm.selectFork(FORKA_ID);
 
         uint256 amount = bound(uint256(rawAmount), 1, DEFAULT_TOKEN_BALANCE);
@@ -17,6 +19,7 @@ contract BridgeDepositFuzzTest is BridgeBaseTest {
 
         uint256 counterBefore = CHAINA.DEPOSIT_COUNTER();
         uint256 userBefore = TOKEN_CHAINA.balanceOf(alice);
+        uint256 bridgeBefore = TOKEN_CHAINA.balanceOf(address(CHAINA));
 
         vm.startPrank(alice);
         TOKEN_CHAINA.approve(address(CHAINA), amount);
@@ -32,6 +35,7 @@ contract BridgeDepositFuzzTest is BridgeBaseTest {
 
         assertEq(CHAINA.DEPOSIT_COUNTER(), counterBefore + 1);
         assertEq(TOKEN_CHAINA.balanceOf(alice), userBefore - amount);
+        assertEq(TOKEN_CHAINA.balanceOf(address(CHAINA)), bridgeBefore + amount);
     }
 
     function testFuzz_DepositSameChainAlwaysReverts(uint96 rawAmount) public {

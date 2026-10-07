@@ -1,7 +1,12 @@
+//! Local validator control API with configured browser-origin restrictions.
+//! Loads the development runtime configuration and serves node status and actions.
+
 use alloy::primitives::U256;
 use axum::{
+    extract::Request,
     extract::State,
-    http::StatusCode,
+    http::{header, HeaderValue, Method, StatusCode},
+    middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
@@ -261,6 +266,9 @@ async fn main() -> Result<()> {
     });
 
     let application_state = ApplicationState { application: application.clone() };
+    let ui_bind: SocketAddr =
+        application.runtime.config.services.ui.bind.parse().wrap_err("invalid UI bind address")?;
+    let origin_policy = OriginPolicy::for_ui_port(ui_bind.port());
     let router = Router::new()
         .route("/healthz", get(health_handler))
         .route("/overview", get(overview_handler))
@@ -268,7 +276,13 @@ async fn main() -> Result<()> {
         .route("/certificates", post(certificates_handler))
         .route("/rewards/distribute", post(reward_distribution_handler))
         .route("/rewards/top-up", post(reward_top_up_handler))
-        .layer(CorsLayer::very_permissive())
+        .layer(middleware::from_fn_with_state(origin_policy.clone(), reject_untrusted_origin))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(origin_policy.origins)
+                .allow_methods([Method::GET, Method::POST])
+                .allow_headers([header::CONTENT_TYPE]),
+        )
         .with_state(application_state);
 
     let bind_address: SocketAddr = application
@@ -778,6 +792,44 @@ fn read_json_state_file<T: DeserializeOwned>(path: &std::path::Path) -> Option<T
     serde_json::from_slice(&bytes).ok()
 }
 
+#[derive(Clone, Debug)]
+struct OriginPolicy {
+    origins: Vec<HeaderValue>,
+}
+
+impl OriginPolicy {
+    fn for_ui_port(port: u16) -> Self {
+        let mut origins = Vec::new();
+        for port in [port, 5173] {
+            for host in ["127.0.0.1", "localhost"] {
+                // A socket port and fixed host always form a valid HTTP header value.
+                origins.push(
+                    HeaderValue::from_str(&format!("http://{host}:{port}"))
+                        .expect("fixed localhost URL contains only valid header bytes"),
+                );
+            }
+        }
+        Self { origins }
+    }
+
+    fn allows(&self, origin: &HeaderValue) -> bool {
+        self.origins.contains(origin)
+    }
+}
+
+async fn reject_untrusted_origin(
+    State(policy): State<OriginPolicy>,
+    request: Request,
+    next: Next,
+) -> Response {
+    if let Some(origin) = request.headers().get(header::ORIGIN) {
+        if !policy.allows(origin) {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+    }
+    next.run(request).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -873,5 +925,50 @@ mod tests {
             value["transactionHash"],
             "0x3333333333333333333333333333333333333333333333333333333333333333"
         );
+    }
+}
+
+#[cfg(test)]
+mod origin_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn hostile_simple_post_is_rejected_before_the_handler() {
+        use axum::body::Body;
+        use tower::ServiceExt;
+
+        let router = Router::new()
+            .route("/rewards/distribute", post(|| async { StatusCode::NO_CONTENT }))
+            .layer(middleware::from_fn_with_state(
+                OriginPolicy::for_ui_port(4273),
+                reject_untrusted_origin,
+            ));
+        for (origin, expected) in [
+            (Some("https://attacker.example"), StatusCode::FORBIDDEN),
+            (Some("null"), StatusCode::FORBIDDEN),
+            (Some("http://localhost:4273"), StatusCode::NO_CONTENT),
+            (None, StatusCode::NO_CONTENT),
+        ] {
+            let mut request = Request::builder().method(Method::POST).uri("/rewards/distribute");
+            if let Some(origin) = origin {
+                request = request.header(header::ORIGIN, origin);
+            }
+            let response =
+                router.clone().oneshot(request.body(Body::empty()).unwrap()).await.unwrap();
+            assert_eq!(response.status(), expected);
+        }
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn configured_ui_ports_allow_only_exact_local_hosts(port in proptest::prelude::any::<u16>()) {
+            let policy = OriginPolicy::for_ui_port(port);
+            for host in ["localhost", "127.0.0.1"] {
+                let origin = HeaderValue::from_str(&format!("http://{host}:{port}")).unwrap();
+                proptest::prop_assert!(policy.allows(&origin));
+                let hostile = HeaderValue::from_str(&format!("http://{host}.attacker.example:{port}")).unwrap();
+                proptest::prop_assert!(!policy.allows(&hostile));
+            }
+        }
     }
 }

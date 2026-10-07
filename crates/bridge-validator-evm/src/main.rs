@@ -1,3 +1,5 @@
+//! Bridge validator worker that checks indexed deposits against configured bridge receipt events and submits attestations to destination contracts.
+
 use alloy::{
     primitives::{keccak256, Address, Bytes, B256, U256},
     rpc::types::TransactionReceipt,
@@ -58,6 +60,18 @@ struct DepositProcessingState {
 struct CertificateResponseBody {
     #[serde(rename = "certificateHex")]
     certificate_hex: String,
+}
+
+#[derive(Debug)]
+struct DepositReceiptExpectation {
+    transaction_hash: B256,
+    bridge: Address,
+    source_chain_id: u64,
+    destination_chain_id: u64,
+    deposit_root: B256,
+    deposit_index: u64,
+    amount: U256,
+    recipient: Address,
 }
 
 #[derive(Debug)]
@@ -191,13 +205,16 @@ impl ValidatorRunner {
 
         self.verify_deposit_receipt(
             &receipt_with_proof,
-            transaction_hash,
-            source_chain_id,
-            destination_chain_id,
-            expected_deposit_root,
-            expected_deposit_index,
-            expected_amount,
-            expected_recipient,
+            &DepositReceiptExpectation {
+                transaction_hash,
+                bridge: self.runtime.deployment(source_chain_id)?.bridge,
+                source_chain_id,
+                destination_chain_id,
+                deposit_root: expected_deposit_root,
+                deposit_index: expected_deposit_index,
+                amount: expected_amount,
+                recipient: expected_recipient,
+            },
         )?;
         if receipt_with_proof.header.state_root != header.state_root {
             return Err(eyre!("receipt proof header state root does not match finalized header"));
@@ -322,58 +339,15 @@ impl ValidatorRunner {
     fn verify_deposit_receipt(
         &self,
         receipt_with_proof: &ReceiptWithProof,
-        transaction_hash: B256,
-        expected_source_chain_id: u64,
-        expected_destination_chain_id: u64,
-        expected_deposit_root: B256,
-        expected_deposit_index: u64,
-        expected_amount: U256,
-        expected_recipient: Address,
+        expected: &DepositReceiptExpectation,
     ) -> Result<()> {
         if !receipt_with_proof.receipt.status() {
-            return Err(eyre!("deposit transaction {} did not succeed", transaction_hash));
+            return Err(eyre!("deposit transaction {} did not succeed", expected.transaction_hash));
         }
-
-        let deposit_log = receipt_with_proof
-            .receipt
-            .inner
-            .logs()
-            .iter()
-            .find(|log| log.topics().first() == Some(&deposit_topic0()))
-            .ok_or_else(|| eyre!("deposit event not found in receipt {}", transaction_hash))?;
-
-        let log_topics = deposit_log.topics();
-        let log_data = deposit_log.data().data.as_ref();
-        if log_topics.get(3).copied().unwrap_or_default() != expected_deposit_root {
-            return Err(eyre!("deposit root mismatch"));
-        }
-
-        let amount = U256::from_be_bytes::<32>(slice_to_32_bytes(&log_data[0..32])?);
-        let recipient = Address::from_slice(&log_data[44..64]);
-        let source_chain_id =
-            U256::from_be_bytes::<32>(slice_to_32_bytes(&log_data[64..96])?).to::<u64>();
-        let destination_chain_id =
-            U256::from_be_bytes::<32>(slice_to_32_bytes(&log_data[96..128])?).to::<u64>();
-        let deposit_index =
-            U256::from_be_bytes::<32>(slice_to_32_bytes(&log_data[128..160])?).to::<u64>();
-
-        if amount != expected_amount {
-            return Err(eyre!("deposit amount mismatch"));
-        }
-        if recipient != expected_recipient {
-            return Err(eyre!("deposit recipient mismatch"));
-        }
-        if source_chain_id != expected_source_chain_id {
-            return Err(eyre!("source chain mismatch"));
-        }
-        if destination_chain_id != expected_destination_chain_id {
-            return Err(eyre!("destination chain mismatch"));
-        }
-        if deposit_index != expected_deposit_index {
-            return Err(eyre!("deposit index mismatch"));
-        }
-
-        Ok(())
+        verify_deposit_logs(
+            receipt_with_proof.receipt.inner.logs().iter().map(|log| &log.inner),
+            expected,
+        )
     }
 
     async fn request_certificate(&self, target_chain_id: u64) -> Result<Bytes> {
@@ -549,9 +523,68 @@ fn backoff_seconds(retry_count: u32, max_backoff_seconds: u64) -> u64 {
     exponential.min(max_backoff_seconds.max(1))
 }
 
+fn verify_deposit_logs<'a>(
+    logs: impl IntoIterator<Item = &'a alloy::primitives::Log>,
+    expected: &DepositReceiptExpectation,
+) -> Result<()> {
+    if logs.into_iter().any(|log| verify_deposit_log(log, expected).is_ok()) {
+        Ok(())
+    } else {
+        Err(eyre!("matching deposit event not found in receipt {}", expected.transaction_hash))
+    }
+}
+
+fn matches_deposit_emitter(log: &alloy::primitives::Log, bridge: Address) -> bool {
+    log.address == bridge && log.topics().first() == Some(&deposit_topic0())
+}
+
+fn verify_deposit_log(
+    log: &alloy::primitives::Log,
+    expected: &DepositReceiptExpectation,
+) -> Result<()> {
+    let topics = log.topics();
+    let data = log.data.data.as_ref();
+    if !matches_deposit_emitter(log, expected.bridge) || topics.len() != 4 || data.len() != 160 {
+        return Err(eyre!("invalid deposit event shape or emitter"));
+    }
+    if topics[3] != expected.deposit_root {
+        return Err(eyre!("deposit root mismatch"));
+    }
+    let amount = U256::from_be_bytes::<32>(slice_to_32_bytes(&data[0..32])?);
+    if data[32..44].iter().any(|byte| *byte != 0) {
+        return Err(eyre!("non-canonical deposit recipient"));
+    }
+    let recipient = Address::from_slice(&data[44..64]);
+    let source_chain_id: u64 = U256::from_be_bytes::<32>(slice_to_32_bytes(&data[64..96])?)
+        .try_into()
+        .wrap_err("source chain ID exceeds u64")?;
+    let destination_chain_id: u64 = U256::from_be_bytes::<32>(slice_to_32_bytes(&data[96..128])?)
+        .try_into()
+        .wrap_err("destination chain ID exceeds u64")?;
+    let deposit_index: u64 = U256::from_be_bytes::<32>(slice_to_32_bytes(&data[128..160])?)
+        .try_into()
+        .wrap_err("deposit index exceeds u64")?;
+    if amount != expected.amount {
+        return Err(eyre!("deposit amount mismatch"));
+    }
+    if recipient != expected.recipient {
+        return Err(eyre!("deposit recipient mismatch"));
+    }
+    if source_chain_id != expected.source_chain_id {
+        return Err(eyre!("source chain mismatch"));
+    }
+    if destination_chain_id != expected.destination_chain_id {
+        return Err(eyre!("destination chain mismatch"));
+    }
+    if deposit_index != expected.deposit_index {
+        return Err(eyre!("deposit index mismatch"));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{backoff_seconds, deposit_topic0, slice_to_32_bytes};
+    use super::*;
 
     #[test]
     fn deposit_topic_matches_expected_signature_hash() {
@@ -572,5 +605,94 @@ mod tests {
     fn abi_word_parser_requires_thirty_two_bytes() {
         assert!(slice_to_32_bytes(&[0u8; 31]).is_err());
         assert!(slice_to_32_bytes(&[0u8; 32]).is_ok());
+    }
+    fn valid_deposit_log() -> (alloy::primitives::Log, DepositReceiptExpectation) {
+        let expected = DepositReceiptExpectation {
+            transaction_hash: B256::ZERO,
+            bridge: Address::from([0x11; 20]),
+            source_chain_id: 1,
+            destination_chain_id: 8453,
+            deposit_root: B256::from([0xaa; 32]),
+            deposit_index: 3,
+            amount: U256::from(5),
+            recipient: Address::from([0x22; 20]),
+        };
+        let mut data = Vec::new();
+        data.extend_from_slice(&expected.amount.to_be_bytes::<32>());
+        data.extend_from_slice(&[0; 12]);
+        data.extend_from_slice(expected.recipient.as_slice());
+        for value in
+            [expected.source_chain_id, expected.destination_chain_id, expected.deposit_index]
+        {
+            data.extend_from_slice(&U256::from(value).to_be_bytes::<32>());
+        }
+        let log = alloy::primitives::Log::new_unchecked(
+            expected.bridge,
+            vec![deposit_topic0(), B256::ZERO, B256::ZERO, expected.deposit_root],
+            data.into(),
+        );
+        (log, expected)
+    }
+
+    #[test]
+    fn canonical_deployed_bridge_deposit_is_accepted() {
+        let (log, expected) = valid_deposit_log();
+        assert!(verify_deposit_log(&log, &expected).is_ok());
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn matching_deposit_is_found_amid_other_events(
+            other_index in proptest::prelude::any::<u64>(),
+            position in 0usize..4,
+        ) {
+            let (matching, expected) = valid_deposit_log();
+            proptest::prop_assume!(other_index != expected.deposit_index);
+            let mut other_deposit = matching.clone();
+            let mut data = other_deposit.data.data.to_vec();
+            data[128..160].copy_from_slice(&U256::from(other_index).to_be_bytes::<32>());
+            other_deposit.data.data = data.into();
+            let mut foreign = matching.clone();
+            foreign.address = Address::ZERO;
+            let malformed = alloy::primitives::Log::new_unchecked(expected.bridge,
+                vec![deposit_topic0()], Vec::new().into());
+            let mut logs = vec![other_deposit, foreign, malformed];
+            proptest::prop_assert!(verify_deposit_logs(&logs, &expected).is_err());
+            logs.insert(position, matching);
+            proptest::prop_assert!(verify_deposit_logs(&logs, &expected).is_ok());
+        }
+
+        #[test]
+        fn malformed_deposit_shapes_are_rejected_without_panicking(
+            data in proptest::collection::vec(proptest::prelude::any::<u8>(), 0..320),
+            topic_count in 0usize..8,
+        ) {
+            proptest::prop_assume!(data.len() != 160 || topic_count != 4);
+            let (_, expected) = valid_deposit_log();
+            let mut topics = vec![B256::ZERO; topic_count];
+            if topic_count > 0 { topics[0] = deposit_topic0(); }
+            let log = alloy::primitives::Log::new_unchecked(expected.bridge, topics, data.into());
+            proptest::prop_assert!(verify_deposit_log(&log, &expected).is_err());
+        }
+
+        #[test]
+        fn foreign_deposit_emitters_are_rejected(address in proptest::prelude::any::<[u8; 20]>()) {
+            let (mut log, expected) = valid_deposit_log();
+            proptest::prop_assume!(address != expected.bridge.into_array());
+            log.address = Address::from(address);
+            proptest::prop_assert!(verify_deposit_log(&log, &expected).is_err());
+        }
+
+        #[test]
+        fn non_canonical_or_overflowing_deposit_words_are_rejected(
+            word in 0usize..4,
+            high_byte in 1u8..=255,
+        ) {
+            let (mut log, expected) = valid_deposit_log();
+            let mut data = log.data.data.to_vec();
+            data[[32, 64, 96, 128][word]] = high_byte;
+            log.data.data = data.into();
+            proptest::prop_assert!(verify_deposit_log(&log, &expected).is_err());
+        }
     }
 }

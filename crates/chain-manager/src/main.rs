@@ -1,3 +1,5 @@
+//! HTTP entry point for the configured EVM receipt and proof collection service.
+
 use chain_manager::api::{ChainConfig, ChainManagerImpl};
 use clap::Parser;
 use eyre::Result;

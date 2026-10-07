@@ -1,3 +1,8 @@
+//! Shared witness inputs, event expectations and deterministic errors for bridge proofs.
+//!
+//! These types define the boundary between host receipt collection and the SP1 guest.
+//! The crate supports allocation without the standard library; the `std` feature adds
+//! JSON support for host applications.
 #![no_std]
 extern crate alloc;
 

@@ -1,3 +1,5 @@
+//! Development fixture generator for BLS keys, signatures and aggregate-verification test data.
+
 use alloy::{
     primitives::{Address, U256},
     sol_types::SolValue,
@@ -81,7 +83,7 @@ fn generate_single_case(wallet_address: &str, chain_ids: &[U256]) -> BlsTestData
         let msg_xy_validator_manager = g1_to_words(&curve_validator_manager);
 
         let signature_stake_manager: G1Affine =
-            G1Affine::sign_message(&expander_stake_manager, &message_bytes, kp.secret_key.clone())
+            G1Affine::sign_message(&expander_stake_manager, &message_bytes, kp.secret_key)
                 .expect("Unable to sign message");
         let signature_validator_manager: G1Affine =
             G1Affine::sign_message(&expander_validator_manager, &message_bytes, kp.secret_key)
@@ -145,6 +147,5 @@ fn main() {
     for wallet in wallets {
         out.push(generate_single_case(wallet, chain_ids));
     }
-    fs::write(format!("bls_test_data.json"), serde_json::to_string_pretty(&out).unwrap())
-        .expect("write");
+    fs::write("bls_test_data.json", serde_json::to_string_pretty(&out).unwrap()).expect("write");
 }

@@ -195,9 +195,8 @@ impl ReceiptsTrie {
 
         let proof_nodes_map = hash_builder.take_proof_nodes();
         let mut proof_entries: Vec<_> = proof_nodes_map.into_inner().into_iter().collect();
-        proof_entries.sort_by(|(left_path, _), (right_path, _)| left_path.cmp(right_path));
-        let proof_nodes =
-            proof_entries.into_iter().map(|(_, node_data)| Bytes::from(node_data)).collect();
+        proof_entries.sort_by_key(|(path, _)| *path);
+        let proof_nodes = proof_entries.into_iter().map(|(_, node_data)| node_data).collect();
 
         Ok(proof_nodes)
     }

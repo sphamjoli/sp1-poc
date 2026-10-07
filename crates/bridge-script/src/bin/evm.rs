@@ -1,3 +1,5 @@
+//! EVM proof generation command for collecting configured bridge receipts and creating contract-compatible SP1 settlement data.
+
 use alloy::eips::eip2718::Encodable2718;
 use alloy_consensus::Header;
 use alloy_primitives::{keccak256, Address, Bytes, B256, U256};

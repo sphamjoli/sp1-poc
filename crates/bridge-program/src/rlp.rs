@@ -22,8 +22,11 @@ pub fn parse_item<'a>(input: &'a [u8], offset: usize) -> ProgramResult<(RlpItem<
     if first <= 0xb7 {
         let len = (first - 0x80) as usize;
         let start = offset + 1;
-        let end = start + len;
+        let end = start.checked_add(len).ok_or(ProgramError::RlpInvalid)?;
         if end > input.len() {
+            return Err(ProgramError::RlpInvalid);
+        }
+        if len == 1 && input[start] <= 0x7f {
             return Err(ProgramError::RlpInvalid);
         }
         return Ok((RlpItem { is_list: false, payload: &input[start..end] }, end));
@@ -36,12 +39,21 @@ pub fn parse_item<'a>(input: &'a [u8], offset: usize) -> ProgramResult<(RlpItem<
         if end_len > input.len() {
             return Err(ProgramError::RlpInvalid);
         }
+        if input[start_len] == 0 {
+            return Err(ProgramError::RlpInvalid);
+        }
         let mut len: usize = 0;
         for &b in &input[start_len..end_len] {
-            len = (len << 8) | (b as usize);
+            len = len
+                .checked_mul(256)
+                .and_then(|value| value.checked_add(b as usize))
+                .ok_or(ProgramError::RlpInvalid)?;
+        }
+        if len < 56 {
+            return Err(ProgramError::RlpInvalid);
         }
         let start = end_len;
-        let end = start + len;
+        let end = start.checked_add(len).ok_or(ProgramError::RlpInvalid)?;
         if end > input.len() {
             return Err(ProgramError::RlpInvalid);
         }
@@ -51,7 +63,7 @@ pub fn parse_item<'a>(input: &'a [u8], offset: usize) -> ProgramResult<(RlpItem<
     if first <= 0xf7 {
         let len = (first - 0xc0) as usize;
         let start = offset + 1;
-        let end = start + len;
+        let end = start.checked_add(len).ok_or(ProgramError::RlpInvalid)?;
         if end > input.len() {
             return Err(ProgramError::RlpInvalid);
         }
@@ -64,12 +76,21 @@ pub fn parse_item<'a>(input: &'a [u8], offset: usize) -> ProgramResult<(RlpItem<
     if end_len > input.len() {
         return Err(ProgramError::RlpInvalid);
     }
+    if input[start_len] == 0 {
+        return Err(ProgramError::RlpInvalid);
+    }
     let mut len: usize = 0;
     for &b in &input[start_len..end_len] {
-        len = (len << 8) | (b as usize);
+        len = len
+            .checked_mul(256)
+            .and_then(|value| value.checked_add(b as usize))
+            .ok_or(ProgramError::RlpInvalid)?;
+    }
+    if len < 56 {
+        return Err(ProgramError::RlpInvalid);
     }
     let start = end_len;
-    let end = start + len;
+    let end = start.checked_add(len).ok_or(ProgramError::RlpInvalid)?;
     if end > input.len() {
         return Err(ProgramError::RlpInvalid);
     }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {Script, console} from "forge-std/Script.sol";
 import {Upgrades, Options} from "openzeppelin-foundry-upgrades/Upgrades.sol";
@@ -178,7 +178,9 @@ contract BridgeDeployScript is Script, JsonDeploymentHandler {
         address deployer,
         address sp1Verifier,
         bytes32 programVkey
-    ) internal {
+    )
+        internal
+    {
         address proxy = Upgrades.deployUUPSProxy(
             "ValidatorManager.sol",
             abi.encodeCall(ValidatorManager.initialize, (deployer, sp1Verifier, programVkey)),

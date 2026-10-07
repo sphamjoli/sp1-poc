@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -20,8 +20,6 @@ import {ReentrancyGuardUpgradeable} from
 /// @author brianspha
 /// @notice Cross-chain bridge implementation with symmetric tree architecture
 /// @dev Handles both deposits (source chain) and claims (destination chain)
-/// @dev THe current version doesnt align with the latest design as it was used
-/// To build a POC still needs major updating :XD
 contract Bridge is
     IBridge,
     BridgeStorage,
@@ -63,7 +61,7 @@ contract Bridge is
         whenNotPaused
         nonReentrant
     {
-        require(depositParams.amount > 0, InvalidTransaction());
+        require(depositParams.amount > 0 && depositParams.to != address(0), InvalidTransaction());
         require(
             depositParams.destinationChain != CHAIN_ID,
             SameChainTransfer(depositParams.destinationChain)
@@ -72,8 +70,13 @@ contract Bridge is
         if (depositParams.token == address(0)) {
             require(msg.value == depositParams.amount, InvalidTransaction());
         } else {
-            IERC20(depositParams.token).safeTransferFrom(
-                msg.sender, address(this), depositParams.amount
+            require(msg.value == 0, InvalidTransaction());
+            IERC20 token = IERC20(depositParams.token);
+            uint256 balanceBefore = token.balanceOf(address(this));
+            token.safeTransferFrom(msg.sender, address(this), depositParams.amount);
+            require(
+                token.balanceOf(address(this)) - balanceBefore == depositParams.amount,
+                InvalidTransaction()
             );
         }
 
@@ -106,7 +109,7 @@ contract Bridge is
     }
 
     /// @inheritdoc IBridge
-    function claim(ClaimParams calldata claimParams) external whenNotPaused {
+    function claim(ClaimParams calldata claimParams) external whenNotPaused nonReentrant {
         require(claimParams.amount > 0, InvalidTransaction());
         require(VALIDATOR_MANAGER != address(0), IValidatorTypes.ZeroAddress());
         require(claimParams.sourceChain != CHAIN_ID, SameChainTransfer(claimParams.sourceChain));
@@ -139,6 +142,11 @@ contract Bridge is
             claimParams.proof.value == expectedLeaf, InvalidMerkleProof(claimParams.depositIndex)
         );
         require(claimParams.proof.existence, InvalidMerkleProof(claimParams.depositIndex));
+        require(
+            claimParams.proof.key == bytes32(claimParams.depositIndex)
+                && claimParams.proof.siblings.length <= LocalExitTreeLib.TREE_HEIGHT,
+            InvalidMerkleProof(claimParams.depositIndex)
+        );
         require(
             _verifyProofAgainstRoot(claimParams.proof, claimParams.sourceRoot),
             InvalidMerkleProof(claimParams.depositIndex)
@@ -200,7 +208,7 @@ contract Bridge is
     {
         if (!proof.existence && proof.auxExistence && proof.key == proof.auxKey) return false;
 
-        bytes32 computed;
+        bytes32 computed = bytes32(0);
         if (proof.existence) {
             computed = keccak256(abi.encodePacked(proof.key, proof.value, bytes32(uint256(1))));
         } else if (proof.auxExistence) {
