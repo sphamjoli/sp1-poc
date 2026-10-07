@@ -24,7 +24,7 @@ eyre = { version = "0.6" }
 tracing = { version = "0.1.40" }
 tokio = { version = "1.40.0", features = ["full"] }
 serde_json = { version = "1.0.94", features = ["alloc"] }
-serde = { version = "=1.0.226", features = ["derive"] }
+serde = { version = "=1.0.226", default-features = false, features = ["derive"] }
 reqwest = { version = "0.12.15" }
 url = { version = "2.3" }
 hex-literal = { version = "0.4.1" }
@@ -36,7 +36,7 @@ recall_merkle_tree_rs = { version = "0.1.0" }
 
 # Alloy dependencies
 alloy = { version = "1.0.36", features = ["full", "node-bindings"] }
-alloy-primitives = { version = "1.4.1" }
+alloy-primitives = { version = "1.4.1", default-features = false }
 alloy-sol-types = { version = "1.4.1" }
 alloy-consensus = { version = "1.1.2" }
 alloy-provider = { version = "1.1.2" }

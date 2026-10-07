@@ -1,3 +1,5 @@
+//! Host command for building bridge witness batches and producing SP1 proofs. RPC receipts and event expectations become guest inputs; chain anchors require a separate trust mechanism.
+
 use alloy_consensus::Header;
 use alloy_primitives::B256;
 use alloy_rpc_types::BlockNumberOrTag;

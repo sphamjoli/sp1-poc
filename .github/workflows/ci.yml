@@ -79,7 +79,7 @@ jobs:
   indexer:
     name: Indexer
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -96,6 +96,8 @@ jobs:
       - name: Install locked Envio dependencies
         run: cd indexer && pnpm install --frozen-lockfile
       - run: bash scripts/check.sh indexer
+      - name: Build indexer from source configuration
+        run: docker build --file indexer/Dockerfile --tag sp1-indexer-ci .
   contracts:
     name: Contracts
     runs-on: ubuntu-latest

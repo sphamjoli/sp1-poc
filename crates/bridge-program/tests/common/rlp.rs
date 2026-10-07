@@ -1,5 +1,5 @@
-/// Shared RLP encoding helpers for bridge-program tests.
-/// These mirror the encoding rules in mpt.rs to build consistent test data.
+//! Shared RLP encoding helpers for bridge-program tests.
+//! These mirror the encoding rules in mpt.rs to build consistent test data.
 
 pub fn rlp_string(payload: &[u8]) -> Vec<u8> {
     if payload.len() == 1 && payload[0] <= 0x7f {

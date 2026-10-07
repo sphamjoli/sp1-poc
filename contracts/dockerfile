@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim AS builder
 
-ARG FOUNDRY_VERSION=stable
+ARG FOUNDRY_VERSION=v1.3.5
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
@@ -18,15 +18,13 @@ WORKDIR /home/foundry
 ENV FOUNDRY_DIR=/home/foundry/.foundry
 ENV PATH="${FOUNDRY_DIR}/bin:${PATH}"
 
-RUN curl -L https://foundry.paradigm.xyz | bash \
-  && if [ "${FOUNDRY_VERSION}" = "stable" ]; then \
-       ${FOUNDRY_DIR}/bin/foundryup; \
-     else \
-       ${FOUNDRY_DIR}/bin/foundryup --install "${FOUNDRY_VERSION}"; \
-     fi \
-  && anvil --version \
-  && forge --version \
-  && cast --version
+RUN curl --proto '=https' --tlsv1.2 -fsSL \
+      https://raw.githubusercontent.com/foundry-rs/foundry/v1.3.5/foundryup/foundryup -o /tmp/foundryup \
+  && echo '7e66e775628501c218374103afb47cd4d5ca8b5a544701a9523d69470e9eed40  /tmp/foundryup' | sha256sum -c - \
+  && mkdir -p "${FOUNDRY_DIR}/bin" \
+  && bash /tmp/foundryup --install "${FOUNDRY_VERSION}" \
+  && forge --version && cast --version && anvil --version
+
 
 FROM debian:bookworm-slim
 

@@ -12,7 +12,7 @@ ark-ec = { workspace = true }
 ark-ff = { workspace = true }
 ark-serialize = { workspace = true }
 ark-std = { workspace = true }
-serde = { workspace = true }
+serde = { workspace = true, features = ["std"] }
 serde_json = { workspace = true }
 alloy = { workspace = true, features = ["full"] }
 hex = { workspace = true }

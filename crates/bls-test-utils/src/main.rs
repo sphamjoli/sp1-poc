@@ -1,3 +1,5 @@
+//! Development fixture generator for BLS keys, signatures and aggregate-verification test data.
+
 use alloy::{
     primitives::{Address, U256},
     sol_types::SolValue,

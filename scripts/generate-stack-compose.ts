@@ -173,7 +173,7 @@ function serializeAnvilService(
 
 function serializeIndexerServices(composeDirectory: string, runtimeConfig: RuntimeConfig): string {
   const hasuraPort = urlPort(runtimeConfig.indexer.hasura_url);
-  const indexerContext = relativePath(composeDirectory, path.join(process.cwd(), "indexer"));
+  const indexerContext = relativePath(composeDirectory, process.cwd());
 
   return `  envio-postgres:
     image: postgres:16
@@ -215,7 +215,7 @@ function serializeIndexerServices(composeDirectory: string, runtimeConfig: Runti
   envio-indexer:
     build:
       context: ${indexerContext}
-      dockerfile: Dockerfile
+      dockerfile: indexer/Dockerfile
     restart: unless-stopped
     depends_on:
       graphql-engine:

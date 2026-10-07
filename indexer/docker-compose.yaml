@@ -38,8 +38,8 @@ services:
 
   envio-indexer:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: indexer/Dockerfile
     depends_on:
       graphql-engine:
         condition: service_healthy

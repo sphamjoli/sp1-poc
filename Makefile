@@ -1,6 +1,6 @@
 -include .env
 
-RUST_TOOLCHAIN ?= stable
+RUST_TOOLCHAIN ?= 1.92.0
 RUST_EDITION ?= 2021
 CHAIN_ID ?= 31339
 PROVER_TYPE ?= cpu
@@ -177,13 +177,8 @@ install-rust:
 	@echo "$(GREEN) Rust toolchain installed$(NC)"
 
 install-sp1:
-	@echo "$(YELLOW)Installing SP1 toolchain...$(NC)"
-	@if ! command -v cargo-prove >/dev/null 2>&1; then \
-		echo "Installing SP1 via sp1up..."; \
-		curl -L https://sp1.succinct.xyz | bash; \
-		. ~/.bashrc || . ~/.zshrc || true; \
-		sp1up; \
-	fi
+	@echo "$(YELLOW)Installing pinned SP1 toolchain...$(NC)"
+	@bash scripts/install-sp1.sh
 	@echo "$(GREEN) SP1 toolchain installed$(NC)"
 
 install-taplo:

@@ -1,3 +1,5 @@
+//! Bridge validator worker that checks indexed deposits against configured bridge receipt events and submits attestations to destination contracts.
+
 use alloy::{
     primitives::{keccak256, Address, Bytes, B256, U256},
     rpc::types::TransactionReceipt,
@@ -342,16 +344,10 @@ impl ValidatorRunner {
         if !receipt_with_proof.receipt.status() {
             return Err(eyre!("deposit transaction {} did not succeed", expected.transaction_hash));
         }
-        let deposit_log = receipt_with_proof
-            .receipt
-            .inner
-            .logs()
-            .iter()
-            .find(|log| matches_deposit_emitter(&log.inner, expected.bridge))
-            .ok_or_else(|| {
-                eyre!("deposit event not found in receipt {}", expected.transaction_hash)
-            })?;
-        verify_deposit_log(&deposit_log.inner, expected)
+        verify_deposit_logs(
+            receipt_with_proof.receipt.inner.logs().iter().map(|log| &log.inner),
+            expected,
+        )
     }
 
     async fn request_certificate(&self, target_chain_id: u64) -> Result<Bytes> {
@@ -527,6 +523,17 @@ fn backoff_seconds(retry_count: u32, max_backoff_seconds: u64) -> u64 {
     exponential.min(max_backoff_seconds.max(1))
 }
 
+fn verify_deposit_logs<'a>(
+    logs: impl IntoIterator<Item = &'a alloy::primitives::Log>,
+    expected: &DepositReceiptExpectation,
+) -> Result<()> {
+    if logs.into_iter().any(|log| verify_deposit_log(log, expected).is_ok()) {
+        Ok(())
+    } else {
+        Err(eyre!("matching deposit event not found in receipt {}", expected.transaction_hash))
+    }
+}
+
 fn matches_deposit_emitter(log: &alloy::primitives::Log, bridge: Address) -> bool {
     log.address == bridge && log.topics().first() == Some(&deposit_topic0())
 }
@@ -634,6 +641,27 @@ mod tests {
     }
 
     proptest::proptest! {
+        #[test]
+        fn matching_deposit_is_found_amid_other_events(
+            other_index in proptest::prelude::any::<u64>(),
+            position in 0usize..4,
+        ) {
+            let (matching, expected) = valid_deposit_log();
+            proptest::prop_assume!(other_index != expected.deposit_index);
+            let mut other_deposit = matching.clone();
+            let mut data = other_deposit.data.data.to_vec();
+            data[128..160].copy_from_slice(&U256::from(other_index).to_be_bytes::<32>());
+            other_deposit.data.data = data.into();
+            let mut foreign = matching.clone();
+            foreign.address = Address::ZERO;
+            let malformed = alloy::primitives::Log::new_unchecked(expected.bridge,
+                vec![deposit_topic0()], Vec::new().into());
+            let mut logs = vec![other_deposit, foreign, malformed];
+            proptest::prop_assert!(verify_deposit_logs(&logs, &expected).is_err());
+            logs.insert(position, matching);
+            proptest::prop_assert!(verify_deposit_logs(&logs, &expected).is_ok());
+        }
+
         #[test]
         fn malformed_deposit_shapes_are_rejected_without_panicking(
             data in proptest::collection::vec(proptest::prelude::any::<u8>(), 0..320),

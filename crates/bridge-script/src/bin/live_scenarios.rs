@@ -1,3 +1,5 @@
+//! Development scenario runner for bridge deposits, attestations and settlement. Reports observed contract results across the configured local chains.
+
 use alloy::{
     primitives::{Address, B256, U256},
     providers::{DynProvider, Provider},
