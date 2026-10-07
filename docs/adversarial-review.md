@@ -39,6 +39,7 @@ The engineering guidance was read end to end from the global `solid-dry-kiss/SKI
 - Tracked compiled web files duplicated maintained TypeScript/Vue and could shadow configuration. They were removed; typechecking now uses noEmit.
 - The remaining owned JavaScript configuration was replaced by TypeScript in `vite.config.ts`. PostCSS versions were aligned so its plugin and Vite share compatible types.
 - Runtime tests assumed locally generated deployment files, and an indexer image could inherit ignored chain metadata from a developer checkout. Tests now own deployment fixtures; the image generates metadata from the canonical checked-in chain configuration.
+- Fresh host CI found another build prerequisite: SP1 skips guest compilation during Clippy, so embedded ELF files must be built first. The shared host gate now runs its normal workspace tests before strict Clippy; it does not exclude any targets or use a placeholder ELF. The host build helper also explicitly locks its nested guest build.
 - Docker and Makefile installers used older or floating tool versions. They now share the reviewed SP1 installer and pinned Rust, Foundry and Bun versions; OpenZeppelin's Docker validator uses its locked local dependency through Bun.
 
 ## Test ownership

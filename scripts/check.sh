@@ -12,8 +12,9 @@ check_format() {
   cargo fmt --all -- --check
 }
 check_host() {
-  cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+  # Normal builds produce the guest ELF; SP1 skips that build under Clippy.
   cargo test --workspace --all-features --locked
+  cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 }
 check_guest() {
   cargo test -p bridge-program --no-default-features --locked
