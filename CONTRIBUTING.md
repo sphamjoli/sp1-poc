@@ -4,7 +4,7 @@ The Rust workspace owns proof execution, validation and runtime services. Solidi
 
 ## Set up a checkout
 
-Install Rust 1.97.1 (selected by `rust-toolchain`), the SP1 5.2.1 compiler, Foundry 1.3.5, Node.js 22 and Bun 1.4.2. Initialise the pinned submodules, then install locked dependencies:
+Install Rust 1.92.0 (selected by `rust-toolchain`), the SP1 5.2.1 compiler, Foundry 1.3.5, Node.js 22 and Bun 1.4.2. Initialise the pinned submodules, then install locked dependencies:
 
 ```bash
 git submodule update --init --recursive

@@ -1,0 +1,9 @@
+node_modules
+**/node_modules
+generated
+.env
+.env.*
+dist
+build
+*.tsbuildinfo
+.git

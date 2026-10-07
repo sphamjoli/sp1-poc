@@ -8,4 +8,3 @@ export function chainName(chainId: number): string {
 }
 `;
 }
-

@@ -1,4 +1,4 @@
-import { serializeIndexerChains } from "./chain-metadata";
+import { serializeIndexerChains } from "./chain-metadata.ts";
 import fs from "node:fs";
 import path from "node:path";
 

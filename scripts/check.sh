@@ -39,9 +39,10 @@ check_web() {
 }
 check_indexer() {
   bun scripts/generate-chain-metadata.ts
-  (cd indexer && bun run codegen && bun run build && bun run mocha)
+  (cd indexer && bun run codegen && pnpm --dir generated audit && bun run build && bun run mocha)
 }
 check_contracts() (
+  cargo build -p validator-utils --bin validator-utils --locked
   export ETH_RPC_URL="http://127.0.0.1:18545"
   export BASE_RPC_URL="http://127.0.0.1:18546"
   anvil --host 127.0.0.1 --port 18545 --chain-id 1 --code-size-limit 999999 --silent &

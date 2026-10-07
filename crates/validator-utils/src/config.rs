@@ -93,7 +93,7 @@ pub struct BootstrapConfig {
 }
 
 impl RuntimeConfig {
-    pub fn read(path: &PathBuf) -> Result<Self> {
+    pub fn read(path: &Path) -> Result<Self> {
         let bytes =
             fs::read(path).wrap_err_with(|| format!("failed to read {}", path.display()))?;
         let mut runtime_config: Self = serde_json::from_slice(&bytes)
@@ -103,7 +103,7 @@ impl RuntimeConfig {
         Ok(runtime_config)
     }
 
-    fn load_chain_configs(&mut self, config_path: &PathBuf) -> Result<()> {
+    fn load_chain_configs(&mut self, config_path: &Path) -> Result<()> {
         if !self.chains.is_empty() {
             return Ok(());
         }
@@ -293,7 +293,7 @@ fn resolve_configured_path(config_path: &Path, configured_path: &Path) -> PathBu
     config_path
         .parent()
         .map(|parent_directory| parent_directory.join(configured_path))
-        .unwrap_or_else(|| configured_path.clone())
+        .unwrap_or_else(|| configured_path.to_path_buf())
 }
 
 fn find_workspace_root(starting_directory: Option<&std::path::Path>) -> Option<PathBuf> {
