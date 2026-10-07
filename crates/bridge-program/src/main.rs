@@ -1,3 +1,5 @@
+//! SP1 guest entry point for deterministic bridge receipt verification. Witness input is read from SP1 I/O and the verified settlement output is committed as public values.
+
 #![no_main]
 sp1_zkvm::entrypoint!(main);
 

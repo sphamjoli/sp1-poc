@@ -39,9 +39,13 @@ fn read_u64(loc: &FieldLocation, topics: &[B256], data: &[u8]) -> ProgramResult<
     match *loc {
         FieldLocation::Topic(i) => {
             let t = topics.get(i as usize).ok_or(ProgramError::DepositFieldMismatch)?;
-            Ok(U256::from_be_slice(t.as_slice()).to::<u64>())
+            U256::from_be_slice(t.as_slice())
+                .try_into()
+                .map_err(|_| ProgramError::DepositFieldMismatch)
         }
-        FieldLocation::DataWord(i) => Ok(u256_from_word(word_at(data, i)?).to::<u64>()),
+        FieldLocation::DataWord(i) => u256_from_word(word_at(data, i)?)
+            .try_into()
+            .map_err(|_| ProgramError::DepositFieldMismatch),
     }
 }
 
@@ -56,14 +60,16 @@ fn read_u256(loc: &FieldLocation, topics: &[B256], data: &[u8]) -> ProgramResult
 }
 
 fn read_address(loc: &FieldLocation, topics: &[B256], data: &[u8]) -> ProgramResult<Address> {
-    match *loc {
-        FieldLocation::Topic(i) => topics
-            .get(i as usize)
-            .copied()
-            .map(address_from_topic)
-            .ok_or(ProgramError::DepositFieldMismatch),
-        FieldLocation::DataWord(i) => Ok(address_from_word(word_at(data, i)?)),
+    let word = match *loc {
+        FieldLocation::Topic(i) => {
+            topics.get(i as usize).ok_or(ProgramError::DepositFieldMismatch)?.as_slice()
+        }
+        FieldLocation::DataWord(i) => word_at(data, i)?,
+    };
+    if word[..12].iter().any(|byte| *byte != 0) {
+        return Err(ProgramError::DepositFieldMismatch);
     }
+    Ok(address_from_word(word))
 }
 
 /// Validate Deposit log against `DepositExpectation`.
@@ -72,36 +78,35 @@ pub fn validate_deposit_log(
     logs: &[Log],
     expected: &DepositExpectation,
 ) -> ProgramResult<(B256, u64)> {
+    let mut saw_deposit = false;
     for log in logs {
-        if log.address != expected.bridge {
+        if log.address != expected.bridge || log.topics.first() != Some(&expected.topic0) {
             continue;
         }
-        if log.topics.is_empty() || log.topics[0] != expected.topic0 {
-            continue;
+        saw_deposit = true;
+        let candidate = (|| {
+            let root = read_b256(&expected.deposit_root.location, &log.topics, &log.data)?;
+            let index = read_u64(&expected.deposit_index.location, &log.topics, &log.data)?;
+            let amount = read_u256(&expected.amount.location, &log.topics, &log.data)?;
+            let to = read_address(&expected.to.location, &log.topics, &log.data)?;
+            if root != expected.deposit_root.value
+                || index != expected.deposit_index.value
+                || amount != expected.amount.value
+                || to != expected.to.value
+            {
+                return Err(ProgramError::DepositFieldMismatch);
+            }
+            Ok((root, index))
+        })();
+        if candidate.is_ok() {
+            return candidate;
         }
-
-        let deposit_root = read_b256(&expected.deposit_root.location, &log.topics, &log.data)?;
-        let deposit_index = read_u64(&expected.deposit_index.location, &log.topics, &log.data)?;
-        let amount = read_u256(&expected.amount.location, &log.topics, &log.data)?;
-        let to = read_address(&expected.to.location, &log.topics, &log.data)?;
-
-        if deposit_root != expected.deposit_root.value {
-            return Err(ProgramError::DepositFieldMismatch);
-        }
-        if deposit_index != expected.deposit_index.value {
-            return Err(ProgramError::DepositFieldMismatch);
-        }
-        if amount != expected.amount.value {
-            return Err(ProgramError::DepositFieldMismatch);
-        }
-        if to != expected.to.value {
-            return Err(ProgramError::DepositFieldMismatch);
-        }
-
-        return Ok((deposit_root, deposit_index));
     }
-
-    Err(ProgramError::DepositLogNotFound)
+    Err(if saw_deposit {
+        ProgramError::DepositFieldMismatch
+    } else {
+        ProgramError::DepositLogNotFound
+    })
 }
 
 /// Extract AttestationSubmitted(validator, sourceChainId, bridgeRoot, blockNumber, stateRoot, timestamp).
@@ -126,15 +131,21 @@ pub fn extract_attestation_submitted(
         }
 
         let validator = address_from_topic(log.topics[1]);
-        let chain_id = U256::from_be_slice(log.topics[2].as_slice()).to::<u64>();
+        let chain_id = U256::from_be_slice(log.topics[2].as_slice())
+            .try_into()
+            .map_err(|_| ProgramError::AttestationFieldMismatch)?;
         let bridge_root = log.topics[3];
 
         if log.data.len() != 96 {
             return Err(ProgramError::AttestationFieldMismatch);
         }
-        let block_number = U256::from_be_slice(&log.data[0..32]).to::<u64>();
+        let block_number = U256::from_be_slice(&log.data[0..32])
+            .try_into()
+            .map_err(|_| ProgramError::AttestationFieldMismatch)?;
         let state_root = B256::from_slice(&log.data[32..64]);
-        let timestamp = U256::from_be_slice(&log.data[64..96]).to::<u64>();
+        let timestamp = U256::from_be_slice(&log.data[64..96])
+            .try_into()
+            .map_err(|_| ProgramError::AttestationFieldMismatch)?;
 
         return Ok((validator, chain_id, bridge_root, block_number, state_root, timestamp));
     }

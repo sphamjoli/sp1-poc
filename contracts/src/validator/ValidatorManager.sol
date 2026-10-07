@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ISP1Verifier} from "@sp1-contracts/ISP1Verifier.sol";
@@ -194,7 +194,7 @@ contract ValidatorManager is
 
         if (status == ValidatorStatus.Active) {
             $.activeValidators.add(validator);
-        } else if (status == ValidatorStatus.Unstaking || status == ValidatorStatus.Inactive) {
+        } else {
             $.activeValidators.remove(validator);
         }
     }

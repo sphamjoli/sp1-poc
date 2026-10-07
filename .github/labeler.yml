@@ -1,0 +1,21 @@
+"component: proof":
+  - changed-files:
+      - any-glob-to-any-file: ["crates/bridge-program/**", "crates/sp1-types/**"]
+"component: runtime":
+  - changed-files:
+      - any-glob-to-any-file: ["crates/**"]
+"component: contracts":
+  - changed-files:
+      - any-glob-to-any-file: ["contracts/**"]
+"component: ui":
+  - changed-files:
+      - any-glob-to-any-file: ["apps/web/**"]
+"component: indexer":
+  - changed-files:
+      - any-glob-to-any-file: ["indexer/**"]
+"component: docs":
+  - changed-files:
+      - any-glob-to-any-file: ["**/*.md", "docs/**"]
+"infra":
+  - changed-files:
+      - any-glob-to-any-file: [".github/**", ".githooks/**", "scripts/**", ".gitleaks.toml", "Makefile", "**/Dockerfile*", "**/docker-compose*.yaml"]

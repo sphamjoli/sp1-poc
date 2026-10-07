@@ -1,3 +1,5 @@
+//! Host command for building bridge witness batches and producing SP1 proofs. RPC receipts and event expectations become guest inputs; chain anchors require a separate trust mechanism.
+
 use alloy_consensus::Header;
 use alloy_primitives::B256;
 use alloy_rpc_types::BlockNumberOrTag;
@@ -74,7 +76,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut event_data: Vec<EventsWithStateInfo> = Vec::new();
     let mut successful = 0;
     for config in configs {
-        let deposit_events = repository.get_deposit_events(config.chain_id.into())?;
+        let deposit_events = repository.get_deposit_events(config.chain_id)?;
         let unprocessed_events: Vec<BridgeEvent> = deposit_events
             .clone()
             .into_iter()
@@ -93,18 +95,12 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         // submit data to SP1 program
         let mut grouped_block: HashMap<String, Vec<BridgeEvent>> = HashMap::new();
         unprocessed_events.clone().into_iter().for_each(|event| {
-            grouped_block
-                .entry(event.clone().block_number)
-                .or_insert_with(Vec::<BridgeEvent>::new)
-                .push(event);
+            grouped_block.entry(event.clone().block_number).or_default().push(event);
         });
 
         for (block_number, events) in grouped_block {
             let header: Header = http_client
-                .finalised_header(
-                    u64::from(config.chain_id),
-                    BlockNumberOrTag::Number(block_number.parse()?),
-                )
+                .finalised_header(config.chain_id, BlockNumberOrTag::Number(block_number.parse()?))
                 .await?;
 
             let block_info = EventsWithStateInfo {
@@ -112,7 +108,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 state_root: header.state_root,
                 parent_hash: header.parent_hash,
                 receipts_root: header.receipts_root,
-                chain_id: config.chain_id.into(),
+                chain_id: config.chain_id,
             };
             event_data.push(block_info);
         }

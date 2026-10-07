@@ -39,3 +39,12 @@ pgo-data.profdata
 
 **/proof-with-pis.json
 **/proof-with-io.json
+
+# The web compiler only checks types; Vite owns emitted build output.
+/apps/web/src/**/*.js
+/apps/web/src/**/*.d.ts
+!/apps/web/src/vite-env.d.ts
+/apps/web/tests/**/*.js
+/apps/web/tests/**/*.d.ts
+/apps/web/vite.config.js
+/apps/web/tailwind.config.js

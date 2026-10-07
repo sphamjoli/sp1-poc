@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {IBridgeTypes} from "./BridgeTypes.sol";
 import {SparseMerkleTree} from "../libs/LocalExitTreeLib.sol";
@@ -14,7 +14,9 @@ interface IBridge is IBridgeTypes {
     function initialize(address owner) external;
 
     /// @notice Deposit native ETH or ERC20 for bridging
-    /// @dev If token is zero address, amount must equal msg.value
+    /// @dev Native deposits require amount == msg.value. ERC20 deposits require zero
+    ///      msg.value and an exact balance increase; fee-on-transfer tokens are rejected.
+    ///      Amount and recipient must be non-zero. Emits Deposit after receiving assets.
     /// @param depositParams Deposit parameters container
     function deposit(DepositParams calldata depositParams) external payable;
 

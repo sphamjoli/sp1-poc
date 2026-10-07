@@ -1,4 +1,8 @@
-mod helpers;
+#[path = "common/rlp.rs"]
+mod rlp_helpers;
+use rlp_helpers as helpers;
+#[path = "common/mpt.rs"]
+mod mpt_helpers;
 use alloy_primitives::keccak256;
 use bridge_program::mpt::verify_receipt_inclusion;
 use sp1_types::ProgramError;
@@ -8,7 +12,7 @@ use sp1_types::ProgramError;
 /// Build a single-leaf MPT proof for a given receipt_envelope at tx_index 0.
 /// Returns (receipts_root, proof_nodes).
 fn single_leaf_proof(receipt_envelope: &[u8]) -> (alloy_primitives::B256, Vec<Vec<u8>>) {
-    helpers::build_single_leaf_mpt(receipt_envelope)
+    mpt_helpers::build_single_leaf_mpt(receipt_envelope)
 }
 
 // ---- happy path ----
@@ -64,4 +68,60 @@ fn wrong_tx_index_returns_error() {
     let result = verify_receipt_inclusion(root, 1, &receipt_envelope, &proof);
     // key nibbles for index 1 differ from the leaf's compact path → TriePathMismatch
     assert!(result.is_err());
+}
+
+#[test]
+fn rejects_trailing_bytes_even_when_root_hash_matches() {
+    let receipt = vec![1];
+    let (_, mut proof) = single_leaf_proof(&receipt);
+    proof[0].push(0);
+    let root = keccak256(&proof[0]);
+    assert_eq!(
+        verify_receipt_inclusion(root, 0, &receipt, &proof),
+        Err(ProgramError::RlpTrailingBytes)
+    );
+}
+
+proptest::proptest! {
+    #[test]
+    fn rejects_non_canonical_compact_paths(
+        flag in proptest::prop_oneof![4u8..=15u8, proptest::strategy::Just(2u8)],
+        padding in 1u8..=15u8,
+    ) {
+        let receipt = vec![1];
+        let (_, mut proof) = single_leaf_proof(&receipt);
+        // The fixture is [list header, path-string header, compact flag, key, value].
+        proof[0][2] = (flag << 4) | padding;
+        let root = keccak256(&proof[0]);
+        proptest::prop_assert_eq!(verify_receipt_inclusion(root, 0, &receipt, &proof), Err(ProgramError::TriePathMismatch));
+    }
+}
+
+proptest::proptest! {
+    #[test]
+    fn rejects_unconsumed_proof_nodes(
+        suffix in proptest::collection::vec(proptest::collection::vec(proptest::prelude::any::<u8>(), 0..64), 1..8),
+    ) {
+        let receipt = vec![1];
+        let (root, mut proof) = single_leaf_proof(&receipt);
+        proof.extend(suffix);
+        proptest::prop_assert_eq!(verify_receipt_inclusion(root, 0, &receipt, &proof), Err(ProgramError::ProofNodeMismatch));
+    }
+}
+
+#[test]
+fn rejects_empty_extension_paths() {
+    let receipt = vec![1];
+    let (_, mut proof) = single_leaf_proof(&receipt);
+    let child_hash = keccak256(&proof[0]);
+    let extension = helpers::rlp_list(&helpers::concat(&[
+        helpers::rlp_string(&[0]),
+        helpers::rlp_string(child_hash.as_slice()),
+    ]));
+    let root = keccak256(&extension);
+    proof.insert(0, extension);
+    assert_eq!(
+        verify_receipt_inclusion(root, 0, &receipt, &proof),
+        Err(ProgramError::TriePathMismatch)
+    );
 }

@@ -13,17 +13,16 @@
   "scripts": {
     "test": "forge test --vvvvv",
     "lint:sol": "solhint 'src/**/*.sol'",
-    "generate:bridgeEvents":"npx ts-node index.ts",
-    "deploy:satelliate":"forge clean && forge script script/bridge/BridgeScript.s.sol:BridgeDeployScript --rpc-url http://localhost:8545 --broadcast -vvvvv --account main --password 1234567 --disable-code-size-limit",
-    "deploy:base":"forge clean && forge script script/bridge/BridgeScript.s.sol:BridgeDeployScript --rpc-url http://localhost:8546 --broadcast -vvvvv --account main --password 1234567 --disable-code-size-limit"
+    "generate:bridgeEvents": "bun index.ts"
   },
   "devDependencies": {
+    "@openzeppelin/upgrades-core": "1.46.0",
     "@prb/math": "^4.1.0",
     "@solarity/solidity-lib": "^3.2.0",
     "@types/node": "^24.1.0",
     "solhint": "^6.0.1",
-    "ts-node": "^10.9.2",
     "typescript": "~5.0.4",
-    "viem": "^2.31.7"
-  }
+    "viem": "^2.57.3"
+  },
+  "packageManager": "bun@1.4.2"
 }

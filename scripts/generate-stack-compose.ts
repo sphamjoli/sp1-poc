@@ -6,14 +6,18 @@ import {
   type RuntimeConfig,
 } from "./runtime-config-lib.ts";
 
-interface ValidatorCatalogEntry {
-  name: string;
-}
-
-interface ComposeDependency {
+type ComposeDependency = {
   serviceName: string;
   condition?: "service_started" | "service_healthy";
-}
+};
+
+type RuntimeServiceOptions = {
+  dependsOn?: ComposeDependency[];
+  healthcheck?: string;
+  ports?: number[];
+  overrides?: Array<[string, string]>;
+  restart?: string;
+};
 
 function bindPort(bind: string): number {
   const separatorIndex = bind.lastIndexOf(":");
@@ -49,18 +53,24 @@ function resolveConfiguredPath(configPath: string, configuredPath: string): stri
 
 function loadValidatorNames(runtimeConfig: RuntimeConfig, configPath: string): string[] {
   const validatorCatalogPath = resolveConfiguredPath(configPath, runtimeConfig.validators_path);
-  const parsedValue = JSON.parse(fs.readFileSync(validatorCatalogPath, "utf8")) as ValidatorCatalogEntry[];
+  const parsedValue: unknown = JSON.parse(fs.readFileSync(validatorCatalogPath, "utf8"));
 
   if (!Array.isArray(parsedValue) || parsedValue.length === 0) {
     throw new Error(`validator catalog ${validatorCatalogPath} is empty`);
   }
 
-  const validatorNames = parsedValue.map((entry) => entry.name?.trim()).filter(Boolean) as string[];
-  if (validatorNames.length !== parsedValue.length) {
-    throw new Error(`validator catalog ${validatorCatalogPath} contains invalid entries`);
-  }
+  const validatorNames = parsedValue.map((entry: unknown) => {
+    if (typeof entry !== "object" || entry === null || !("name" in entry) ||
+        typeof entry.name !== "string" || !/^[a-z][a-z0-9-]{0,62}$/.test(entry.name)) {
+      throw new Error(`validator catalog ${validatorCatalogPath} contains an invalid service name`);
+    }
+    return entry.name;
+  });
 
-  return [...new Set(validatorNames)].sort();
+  if (new Set(validatorNames).size !== validatorNames.length) {
+    throw new Error(`validator catalog ${validatorCatalogPath} contains duplicate names`);
+  }
+  return validatorNames.sort();
 }
 
 function serializeDependsOn(dependencies: ComposeDependency[]): string {
@@ -76,9 +86,13 @@ function serializeDependsOn(dependencies: ComposeDependency[]): string {
   return `    depends_on:\n${lines.join("\n")}\n`;
 }
 
+function composeScalar(value: string): string {
+  return JSON.stringify(value.replaceAll("$", () => "$$"));
+}
+
 function serializeEnvironment(environmentEntries: Array<[string, string]>): string {
   return environmentEntries
-    .map(([key, value]) => `      ${key}: ${JSON.stringify(value)}`)
+    .map(([key, value]) => `      ${key}: ${composeScalar(value)}`)
     .join("\n");
 }
 
@@ -145,7 +159,7 @@ function serializeAnvilService(
       - "--state-interval"
       - "${stateIntervalSeconds}"
     ports:
-      - "${rpcPort}:${rpcPort}"
+      - "127.0.0.1:${rpcPort}:${rpcPort}"
     volumes:
       - ${stateDirectory}:/var/lib/anvil/${chain.id}
     healthcheck:
@@ -159,17 +173,17 @@ function serializeAnvilService(
 
 function serializeIndexerServices(composeDirectory: string, runtimeConfig: RuntimeConfig): string {
   const hasuraPort = urlPort(runtimeConfig.indexer.hasura_url);
-  const indexerContext = relativePath(composeDirectory, path.join(process.cwd(), "indexer"));
+  const indexerContext = relativePath(composeDirectory, process.cwd());
 
   return `  envio-postgres:
     image: postgres:16
     restart: unless-stopped
     ports:
-      - "${hasuraPort + 1000}:5432"
+      - "127.0.0.1:${hasuraPort + 1000}:5432"
     volumes:
       - envio_postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_PASSWORD: ${runtimeConfig.indexer.hasura_secret}
+      POSTGRES_PASSWORD: ${composeScalar(runtimeConfig.indexer.hasura_secret)}
       POSTGRES_USER: postgres
       POSTGRES_DB: envio-dev
 
@@ -180,13 +194,13 @@ function serializeIndexerServices(composeDirectory: string, runtimeConfig: Runti
       envio-postgres:
         condition: service_started
     ports:
-      - "${hasuraPort}:8080"
+      - "127.0.0.1:${hasuraPort}:8080"
     environment:
-      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:${runtimeConfig.indexer.hasura_secret}@envio-postgres:5432/envio-dev
+      HASURA_GRAPHQL_DATABASE_URL: ${composeScalar(`postgres://postgres:${encodeURIComponent(runtimeConfig.indexer.hasura_secret)}@envio-postgres:5432/envio-dev`)}
       HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
       HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup,http-log,webhook-log,websocket-log,query-log
       HASURA_GRAPHQL_NO_OF_RETRIES: "10"
-      HASURA_GRAPHQL_ADMIN_SECRET: ${runtimeConfig.indexer.hasura_secret}
+      HASURA_GRAPHQL_ADMIN_SECRET: ${composeScalar(runtimeConfig.indexer.hasura_secret)}
       HASURA_GRAPHQL_STRINGIFY_NUMERIC_TYPES: "true"
       HASURA_GRAPHQL_DEV_MODE: "true"
       PORT: "8080"
@@ -201,24 +215,24 @@ function serializeIndexerServices(composeDirectory: string, runtimeConfig: Runti
   envio-indexer:
     build:
       context: ${indexerContext}
-      dockerfile: Dockerfile
+      dockerfile: indexer/Dockerfile
     restart: unless-stopped
     depends_on:
       graphql-engine:
         condition: service_healthy
 ${serializeExtraHosts(["host.docker.internal:host-gateway"])}    environment:
-      ENVIO_POSTGRES_PASSWORD: ${runtimeConfig.indexer.hasura_secret}
+      ENVIO_POSTGRES_PASSWORD: ${composeScalar(runtimeConfig.indexer.hasura_secret)}
       ENVIO_PG_HOST: envio-postgres
       ENVIO_PG_PORT: 5432
       ENVIO_PG_USER: postgres
       ENVIO_PG_DATABASE: envio-dev
-      PG_PASSWORD: ${runtimeConfig.indexer.hasura_secret}
+      PG_PASSWORD: ${composeScalar(runtimeConfig.indexer.hasura_secret)}
       PG_HOST: envio-postgres
       PG_PORT: 5432
       PG_USER: postgres
       PG_DATABASE: envio-dev
       HASURA_GRAPHQL_ENDPOINT: http://graphql-engine:8080/v1/metadata
-      HASURA_GRAPHQL_ADMIN_SECRET: ${runtimeConfig.indexer.hasura_secret}
+      HASURA_GRAPHQL_ADMIN_SECRET: ${composeScalar(runtimeConfig.indexer.hasura_secret)}
       HASURA_SERVICE_HOST: graphql-engine
       HASURA_SERVICE_PORT: 8080
       CONFIG_FILE: config.yaml
@@ -247,7 +261,7 @@ function serializeUiService(composeDirectory: string, runtimeConfig: RuntimeConf
       VITE_NODE_MANAGER_URL: "http://localhost:${nodeManagerPort}"
       VITE_SWAP_MODE: "local"
     ports:
-      - "${uiPort}:${uiPort}"
+      - "127.0.0.1:${uiPort}:${uiPort}"
 `;
 }
 
@@ -257,17 +271,11 @@ function serializeRuntimeService(
   configPath: string,
   serviceName: string,
   command: string[],
-  options: {
-    dependsOn?: ComposeDependency[];
-    healthcheck?: string;
-    ports?: number[];
-    overrides?: Array<[string, string]>;
-    restart?: string;
-  } = {},
+  options: RuntimeServiceOptions = {},
 ): string {
   const runtimeContext = relativePath(composeDirectory, process.cwd());
   const portLines = options.ports?.length
-    ? `    ports:\n${options.ports.map((port) => `      - "${port}:${port}"`).join("\n")}\n`
+    ? `    ports:\n${options.ports.map((port) => `      - "127.0.0.1:${port}:${port}"`).join("\n")}\n`
     : "";
   const dependsOn = serializeDependsOn(options.dependsOn ?? []);
   const healthcheck = options.healthcheck ?? "";
@@ -404,7 +412,7 @@ function serializeRuntimeServices(runtimeConfig: RuntimeConfig, configPath: stri
     .join("\n\n");
 }
 
-function buildComposeFile(runtimeConfig: RuntimeConfig, configPath: string): string {
+export function buildComposeFile(runtimeConfig: RuntimeConfig, configPath: string): string {
   const composeDirectory = path.dirname(path.resolve(configPath));
   const anvilServices = runtimeConfig.chains
     .map((chain) => serializeAnvilService(composeDirectory, chain, runtimeConfig.services.anvil.state_interval_secs))

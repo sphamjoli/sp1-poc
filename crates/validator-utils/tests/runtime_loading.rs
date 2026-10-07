@@ -55,8 +55,33 @@ fn clear_environment_overrides(names: &[&str]) {
 #[test]
 fn runtime_loading_reads_catalog_and_deployments() {
     let _guard = environment_guard();
-    let runtime = LoadedRuntime::load(runtime_config_path())
-        .expect("runtime should load from checked-in config");
+    // Deployment outputs are ignored build artifacts, so the loader test owns its inputs.
+    let fixture_directory =
+        std::env::temp_dir().join(format!("sp1-runtime-deployment-test-{}", std::process::id()));
+    std::fs::create_dir_all(&fixture_directory).expect("fixture directory");
+    let deployment = serde_json::json!({
+        "bridge": "0x1111111111111111111111111111111111111111",
+        "stakeManager": "0x2222222222222222222222222222222222222222",
+        "tokenA": "0x3333333333333333333333333333333333333333",
+        "tokenB": "0x4444444444444444444444444444444444444444",
+        "validatorManager": "0x5555555555555555555555555555555555555555"
+    });
+    for chain_id in [ETHEREUM_CHAIN_ID, BASE_CHAIN_ID] {
+        std::fs::write(
+            fixture_directory.join(format!("{chain_id}.json")),
+            serde_json::to_vec(&deployment).expect("deployment JSON"),
+        )
+        .expect("deployment fixture");
+    }
+    let mut config: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(runtime_config_path()).expect("runtime config"))
+            .expect("config JSON");
+    config["deployments_dir"] = serde_json::json!(fixture_directory);
+    let config_path = write_generated_runtime_config("runtime.deployment-test.json", &config);
+    let runtime =
+        LoadedRuntime::load(&config_path).expect("runtime should load deployment fixtures");
+    remove_generated_runtime_config(&config_path);
+    std::fs::remove_dir_all(&fixture_directory).expect("remove deployment fixtures");
 
     assert_eq!(runtime.config.base_chain_id, BASE_CHAIN_ID);
     assert_eq!(runtime.validator_catalog.validators().len(), 5);

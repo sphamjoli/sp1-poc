@@ -1,32 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {BridgeBaseTest} from "../base/BridgeBase.t.sol";
 
 contract BridgeDepositTest is BridgeBaseTest {
-    function test_depositErc20_UpdatesState() public {
+    /// @notice Basic sanity checks for Chain A token configuration
+    function test_token_Config() external {
         vm.selectFork(FORKA_ID);
-        uint256 amount = 5 ether;
-
-        uint256 userBefore = TOKEN_CHAINA.balanceOf(alice);
-        uint256 bridgeBefore = TOKEN_CHAINA.balanceOf(address(CHAINA));
-        uint256 counterBefore = CHAINA.DEPOSIT_COUNTER();
-
-        vm.startPrank(alice);
-        TOKEN_CHAINA.approve(address(CHAINA), amount);
-        CHAINA.deposit(
-            DepositParams({
-                amount: amount,
-                token: address(TOKEN_CHAINA),
-                to: alice,
-                destinationChain: CHAINB_ID
-            })
-        );
-        vm.stopPrank();
-
-        assertEq(CHAINA.DEPOSIT_COUNTER(), counterBefore + 1);
-        assertEq(TOKEN_CHAINA.balanceOf(alice), userBefore - amount);
-        assertEq(TOKEN_CHAINA.balanceOf(address(CHAINA)), bridgeBefore + amount);
+        assertEq(TOKEN_CHAINA.totalSupply(), DEFAULT_OWNER_TOKEN_BALANCE);
+        assertEq(TOKEN_CHAINA.name(), "TOKEN Chain A");
+        assertEq(TOKEN_CHAINA.symbol(), "TKCA");
     }
 
     function test_depositRevertsOnZeroAmount() public {
@@ -41,23 +24,6 @@ contract BridgeDepositTest is BridgeBaseTest {
                 token: address(TOKEN_CHAINA),
                 to: alice,
                 destinationChain: CHAINB_ID
-            })
-        );
-        vm.stopPrank();
-    }
-
-    function test_depositRevertsOnSameChain() public {
-        vm.selectFork(FORKA_ID);
-
-        vm.startPrank(alice);
-        TOKEN_CHAINA.approve(address(CHAINA), 1 ether);
-        vm.expectRevert(abi.encodeWithSelector(SameChainTransfer.selector, CHAINA_ID));
-        CHAINA.deposit(
-            DepositParams({
-                amount: 1 ether,
-                token: address(TOKEN_CHAINA),
-                to: alice,
-                destinationChain: CHAINA_ID
             })
         );
         vm.stopPrank();

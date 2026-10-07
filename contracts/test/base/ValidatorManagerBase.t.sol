@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -250,6 +250,7 @@ abstract contract ValidatorManagerBaseTest is StakeManagerBaseTest {
         uint256 forkId
     )
         internal
+        returns (IValidatorTypes.VerificationParams memory params)
     {
         address[] memory baddies = new address[](equivocators.length);
         for (uint256 i = 0; i < equivocators.length; ++i) {
@@ -285,7 +286,7 @@ abstract contract ValidatorManagerBaseTest is StakeManagerBaseTest {
             validBridgeRoot: validBridgeRoot
         });
 
-        IValidatorTypes.VerificationParams memory params = IValidatorTypes.VerificationParams({
+        params = IValidatorTypes.VerificationParams({
             publicValues: abi.encode(publicValues),
             proofBytes: ""
         });

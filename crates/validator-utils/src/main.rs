@@ -1,3 +1,5 @@
+//! Command-line bootstrap and configuration utilities for development validator identities and runtime deployments.
+
 use clap::{Parser, Subcommand};
 use eyre::Result;
 use validator_utils::{

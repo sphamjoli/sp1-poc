@@ -1,3 +1,9 @@
+//! Shared configuration, validator identities and EVM clients for bridge host services.
+//!
+//! Runtime loading resolves chain settings, deployment artifacts and validator catalogs.
+//! Bootstrap and provider helpers connect those configured identities to local services
+//! and contracts.
+
 pub mod bindings;
 pub mod bootstrap;
 pub mod catalog;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {IValidatorTypes} from "./IValidatorTypes.sol";
 
@@ -17,11 +17,5 @@ abstract contract ValidatorManagerStorage is IValidatorTypes {
         assembly {
             $.slot := position
         }
-    }
-
-    /// @notice Get Validator Manager storage key
-    /// @return Storage position key
-    function _getStorageKey() internal pure returns (bytes32) {
-        return VM_STORAGE_SLOT;
     }
 }

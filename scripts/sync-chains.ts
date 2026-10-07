@@ -1,3 +1,4 @@
+import { serializeIndexerChains } from "./chain-metadata.ts";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -149,17 +150,6 @@ export const SWAP_SPENDER: \`0x\${string}\` = "${swapSpender}";
 `;
 }
 
-function serializeIndexerChains(runtimeConfig: RuntimeConfig): string {
-  const chainLabels = Object.fromEntries(runtimeConfig.chains.map((chain) => [chain.id, chain.name]));
-
-  return `export const CHAIN_NAMES: Record<number, string> = ${JSON.stringify(chainLabels, null, 2)};
-
-export function chainName(chainId: number): string {
-  return CHAIN_NAMES[chainId] ?? \`Chain \${chainId}\`;
-}
-`;
-}
-
 function writeFile(outputPath: string, contents: string): void {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, `${contents.trimEnd()}\n`, "utf8");
@@ -223,7 +213,7 @@ async function synchronizeGeneratedAssets(command: Command): Promise<void> {
   }
 
   writeFile(uiGeneratedConfigPath, serializeUiChains(runtimeConfig));
-  writeFile(indexerGeneratedConfigPath, serializeIndexerChains(runtimeConfig));
+  writeFile(indexerGeneratedConfigPath, serializeIndexerChains(runtimeConfig.chains));
 
   process.env.RUNTIME_CONFIG = outputPath;
   updateIndexerConfig();

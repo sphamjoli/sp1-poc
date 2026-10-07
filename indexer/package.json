@@ -3,22 +3,25 @@
   "version": "0.1.0",
   "scripts": {
     "clean": "tsc --clean",
-    "build": "tsc --build",
+    "build": "tsc --build && tsc --noEmit -p tsconfig.tooling.json",
     "watch": "tsc --watch",
     "mocha": "ts-mocha test/**/*.ts",
-    "codegen": "envio codegen",
+    "codegen": "bun tooling/codegen.ts",
     "dev": "envio dev",
     "start": "envio start",
-    "test": "pnpm mocha"
+    "test": "pnpm mocha",
+    "codegen:update-lock": "bun tooling/codegen.ts --update-lock"
   },
   "devDependencies": {
-    "@types/chai": "^4.3.11",    
+    "@types/chai": "^4.3.11",
     "@types/mocha": "10.0.6",
     "@types/node": "20.8.8",
-    "ts-mocha": "^10.0.0",
+    "ts-mocha": "11.1.0",
     "typescript": "5.2.2",
     "chai": "4.3.10",
-    "mocha": "10.2.0"
+    "mocha": "11.8.0",
+    "ts-node": "10.9.2",
+    "tsconfig-paths": "4.2.0"
   },
   "dependencies": {
     "envio": "2.25.0"
@@ -27,6 +30,37 @@
     "generated": "./generated"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "minimatch@>=5 <6": "5.1.8",
+      "minimatch@>=9 <10": "9.0.9",
+      "brace-expansion@>=2 <3": "2.1.7",
+      "diff@>=4 <5": "4.0.4",
+      "js-yaml@>=4 <5": "4.3.2",
+      "ws@>=8 <9": "8.21.0",
+      "fast-copy@>=3 <4": "3.1.0",
+      "serialize-javascript": "7.1.2",
+      "diff@>=7 <8": "8.0.4"
+    },
+    "onlyBuiltDependencies": [
+      "rescript"
+    ]
+  },
+  "packageManager": "pnpm@10.17.1",
+  "generatedRuntimeOverrides": {
+    "express@>=4 <5": "4.22.3",
+    "body-parser@>=1 <2": "1.20.8",
+    "path-to-regexp@>=0 <1": "0.1.13",
+    "cookie@>=0 <1": "0.7.2",
+    "qs@>=6 <7": "6.16.0",
+    "send@>=0 <1": "0.19.2",
+    "serve-static@>=1 <2": "1.16.3",
+    "proxy-addr@>=2 <3": "2.0.8",
+    "ws@>=7 <8": "7.5.13",
+    "lodash@>=4 <5": "4.18.1",
+    "shell-quote@>=1 <2": "1.12.0",
+    "ajv@>=6 <7": "6.14.0"
   }
 }

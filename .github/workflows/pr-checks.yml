@@ -1,0 +1,233 @@
+name: PR Checks
+
+# Secret scanning, PR title enforcement, and path-based auto-labeling.
+# Combined into one workflow (rather than separate files) so a single
+# `summary` job, gated by `needs:` on the other three, is the ONLY writer of
+# the shared PR comment — three independent jobs each doing their own
+# read-modify-write on that comment would race (lost updates, or duplicate
+# comments if two jobs both find no existing one to update).
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled, ready_for_review]
+  push:
+    branches: [main]
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+jobs:
+  scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.scan.outputs.result }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Full history so a push to main scans the whole repository, not
+          # just the tip commit. Pull requests scan the merged working tree.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Gitleaks
+        run: |
+          curl -sSfL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            -o gitleaks.tar.gz
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo install gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Scan for secrets
+        id: scan
+        run: |
+          set +e
+          # `gitleaks dir` walks the raw filesystem and does not honor
+          # .gitignore, so gitignored build output (target/, node_modules/,
+          # dist/) would be scanned if any happened to be present. This job
+          # never builds anything before this step, so none exists today —
+          # but .gitleaks.toml's [allowlist] excludes those paths explicitly
+          # so this stays true even if a future change adds a build/cache
+          # step earlier in this job, or someone runs this locally in a
+          # dirty working tree.
+          mkdir /tmp/owned-source
+          git archive HEAD | tar -x -C /tmp/owned-source
+          gitleaks dir /tmp/owned-source \
+            --config .gitleaks.toml \
+            --redact \
+            --no-banner \
+            --report-format json \
+            --report-path gitleaks-report.json \
+            --log-level warn
+          SCAN_EXIT=$?
+          set -e
+
+          if [ "$SCAN_EXIT" -eq 0 ]; then
+            echo "result=Passed - No secrets detected" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          COUNT=$(jq 'length' gitleaks-report.json 2>/dev/null || echo "?")
+          echo "result=Failed - $COUNT potential secret(s) detected (see workflow run for details)" >> "$GITHUB_OUTPUT"
+          exit 1
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+  title:
+    name: PR Title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      result: ${{ steps.run.outputs.result }}
+    steps:
+      - name: Check PR title
+        id: title
+        uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5155ed6017 # v5.5.3
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            test
+            chore
+            ci
+            perf
+            revert
+          scopes: |
+            security
+            repo
+            bridge
+            proof
+            runtime
+            contracts
+            protocol
+            ui
+            indexer
+            docs
+            ci
+            deps
+          requireScope: false
+          subjectPattern: ^[a-zA-Z][-a-zA-Z0-9 .,():+/]+$
+
+      - name: Process result
+        id: run
+        run: |
+          if [ "${{ steps.title.outcome }}" == "success" ]; then
+            echo "result=Valid" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=Invalid - use type(scope): description (e.g. fix(bridge): reject replayed claims)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail if title invalid
+        if: steps.title.outcome == 'failure'
+        run: exit 1
+
+  labels:
+    name: Labels
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      result: ${{ steps.run.outputs.result }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Auto-label
+        uses: actions/labeler@8558fd74291d67161a8a78ce36a881fa63b766a9 # v5.0.0
+        continue-on-error: true
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read applied labels
+        id: run
+        if: always()
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          # github-script writes the script's return value to the `result`
+          # output, so return the labels rather than setting `result` directly.
+          result-encoding: string
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = context.payload.pull_request.number;
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number });
+            return pr.labels.map(l => l.name).join(", ") || "None";
+
+  summary:
+    name: CI Summary Comment
+    needs: [scan, title, labels]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      # Comments on a pull request go through the issues API but need the
+      # pull-requests scope.
+      pull-requests: write
+    steps:
+      - name: Upsert summary comment
+        # A pull request from a fork gets a read-only token whatever this job
+        # requests, so the write fails there. The checks above still gate the
+        # pull request; only the comment is lost.
+        continue-on-error: true
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          SCAN_RESULT: ${{ needs.scan.outputs.result }}
+          TITLE_RESULT: ${{ needs.title.outputs.result }}
+          LABELS_RESULT: ${{ needs.labels.outputs.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const marker = "<!-- ci-summary -->";
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const runUrl = process.env.RUN_URL;
+
+            const rows = [
+              ["Secret Scan", process.env.SCAN_RESULT || "Unknown"],
+              ["PR Title", process.env.TITLE_RESULT || "Unknown"],
+              ["Labels", process.env.LABELS_RESULT || "Unknown"],
+            ];
+
+            let table = "| Check | Result |\n|:------|:-------|\n";
+            for (const [check, result] of rows) {
+              table += `| ${check} | ${result} |\n`;
+            }
+
+            const body = `${marker}\n## CI Summary\n\n${table}\n[Full run](${runUrl})`;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number, per_page: 100,
+            });
+            const existing = comments.find(c =>
+              c.user?.login === "github-actions[bot]" && c.body?.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }

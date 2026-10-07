@@ -29,3 +29,5 @@ apps/web/dist
 apps/web/node_modules
 apps/web/test-results
 indexer/generated
+
+indexer/src/generated

@@ -1,0 +1,17 @@
+title = "SP1 PoC secret checks"
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Published, unfunded development keys used by Anvil and BLS fixtures; never use with real assets"
+condition = "AND"
+paths = ['''(?:^|/)(?:config/(?:dev-validators|runtime\.local)\.json|contracts/test/data/bls\.json|Makefile|README\.md|crates/.+\.rs)$''']
+regexTarget = "secret"
+regexes = ['''^(?:0x)?(?:0cf77e55e475b206b742eff2d20e7f65631a1f9b09475bcabccbb2c93427d7b6|1a61fab85d65552c85d47a91a970ded5ed478a67624061bc368d5ed585d38d39|1b4153960698c6f45b2463bb67f1ea0b3164f6f587d023c99ceb27c468ebaa35|1c33fb1dc54e38fde9490bce8f2edbc817dbfcf2ad08d0f3dc547d83111c4a3e|220f74fd8e6be06e46911b95f1347fa73be85d2d9d17de37f7d47ed1b90e0062|38e47a7b719dce63662aeaf43440326f551b8a7ee198cee35cb5d517f2d296a2|634c8960d3348effe78b2d09b1681aef152993cb9b0a7e54e36d4a3bc7e756df|81303560ad6c989a3742ee83b09ef1844884c97e43e85613e38a8b991b5620c5|9c0257114eb9399a2985f8e75dad7600c5d89fe3824ffa99ec1c3eb8bf3b0501|ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80|d140b5ee63ed46a83f0e4857422a076d4b61c47aa09db822609f33339e8fa938)$''']
+
+[[allowlists]]
+description = "Public ERC20 contract addresses in deterministic UI tests and event generator"
+condition = "AND"
+paths = ['''(?:^|/)(?:apps/web/tests/unit/operations\.test\.ts|contracts/index\.ts)$''']
+regexTarget = "secret"
+regexes = ['''^(?:0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0|0x2bc0484B5b0FAfFf0a14B858D85E8830621fE0CA|0x4c07ce6454D5340591f62fD7d3978B6f42Ef953e|0xFeaBf2d20A0Ba3431Aba53079123Ef1F2B017040|0x396299f03Df7d8b001bE510f5b1d8d5FFb797e33)$''']
