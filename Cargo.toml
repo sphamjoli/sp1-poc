@@ -67,9 +67,9 @@ mongodb = { version = "3.2.4", features = [
 bloomfilter = { version = "3.0.1" }
 
 # SP1 dependencies
-sp1-sdk = { version = "5.0.0" }
-sp1-zkvm = { version = "5.0.0" }
-sp1-build = { version = "5.0.0" }
+sp1-sdk = { version = "=5.2.4", default-features = false }
+sp1-zkvm = { version = "=5.2.4" }
+sp1-build = { version = "=5.2.4" }
 
 
 # misc

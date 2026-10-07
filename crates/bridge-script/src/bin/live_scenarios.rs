@@ -232,7 +232,7 @@ async fn run_slash(
     let receipt = slash_validator(&context, amount).await?;
     let after = context.snapshot().await?;
 
-    Ok(context.report(
+    context.report(
         "slash",
         vec![receipt.transaction_hash.to_string()],
         Some(before),
@@ -241,7 +241,7 @@ async fn run_slash(
             "slashAmountWei": amount.to_string(),
             "forced": force,
         }),
-    )?)
+    )
 }
 
 async fn run_jail(
@@ -256,7 +256,7 @@ async fn run_jail(
     let receipt = slash_validator(&context, amount).await?;
     let after = context.snapshot().await?;
 
-    Ok(context.report(
+    context.report(
         "jail",
         vec![receipt.transaction_hash.to_string()],
         Some(before),
@@ -266,7 +266,7 @@ async fn run_jail(
             "expectedStatus": "Inactive",
             "forced": force,
         }),
-    )?)
+    )
 }
 
 async fn run_recover(
@@ -292,7 +292,7 @@ async fn run_recover(
     tx_hashes.push(approve_receipt.transaction_hash.to_string());
     tx_hashes.push(stake_receipt.transaction_hash.to_string());
 
-    Ok(context.report(
+    context.report(
         "recover",
         tx_hashes,
         Some(before),
@@ -300,7 +300,7 @@ async fn run_recover(
         json!({
             "restakeAmountWei": amount.to_string(),
         }),
-    )?)
+    )
 }
 
 async fn run_jail_recover(
@@ -330,7 +330,7 @@ async fn run_jail_recover(
     tx_hashes.push(approve_receipt.transaction_hash.to_string());
     tx_hashes.push(stake_receipt.transaction_hash.to_string());
 
-    Ok(context.report(
+    context.report(
         "jail-recover",
         tx_hashes,
         Some(before),
@@ -340,7 +340,7 @@ async fn run_jail_recover(
             "restakeAmountWei": restake_amount.to_string(),
             "forced": force,
         }),
-    )?)
+    )
 }
 
 async fn run_begin_unstake(
@@ -353,7 +353,7 @@ async fn run_begin_unstake(
     let receipt = begin_unstaking(&context, amount).await?;
     let after = context.snapshot().await?;
 
-    Ok(context.report(
+    context.report(
         "begin-unstake",
         vec![receipt.transaction_hash.to_string()],
         Some(before),
@@ -361,7 +361,7 @@ async fn run_begin_unstake(
         json!({
             "unstakeAmountWei": amount.to_string(),
         }),
-    )?)
+    )
 }
 
 async fn run_complete_unstake(
@@ -381,7 +381,7 @@ async fn run_complete_unstake(
     let receipt = complete_unstaking(&context).await?;
     let after = context.snapshot().await.ok();
 
-    Ok(context.report(
+    context.report(
         "complete-unstake",
         vec![receipt.transaction_hash.to_string()],
         Some(before),
@@ -390,7 +390,7 @@ async fn run_complete_unstake(
             "fastForwarded": fast_forward,
             "advancedSeconds": advanced_seconds,
         }),
-    )?)
+    )
 }
 
 async fn run_partial_unstake(
@@ -417,7 +417,7 @@ async fn run_partial_unstake(
     }
     let after = context.snapshot().await.ok();
 
-    Ok(context.report(
+    context.report(
         "partial-unstake",
         tx_hashes,
         Some(before),
@@ -427,7 +427,7 @@ async fn run_partial_unstake(
             "fastForwarded": fast_forward,
             "advancedSeconds": advanced_seconds,
         }),
-    )?)
+    )
 }
 
 async fn run_full_unstake(
@@ -457,7 +457,7 @@ async fn run_full_unstake(
     }
     let after = context.snapshot().await.ok();
 
-    Ok(context.report(
+    context.report(
         "full-unstake",
         tx_hashes,
         Some(before),
@@ -467,7 +467,7 @@ async fn run_full_unstake(
             "fastForwarded": fast_forward,
             "advancedSeconds": advanced_seconds,
         }),
-    )?)
+    )
 }
 
 async fn run_claim_rewards(
@@ -501,7 +501,7 @@ async fn run_claim_rewards(
     tx_hashes.push(receipt.transaction_hash.to_string());
     let after = context.snapshot().await?;
 
-    Ok(context.report(
+    context.report(
         "claim-rewards",
         tx_hashes,
         Some(before),
@@ -510,7 +510,7 @@ async fn run_claim_rewards(
             "claimedRewardWei": pending_rewards.to_string(),
             "distributionTriggered": distribution_triggered,
         }),
-    )?)
+    )
 }
 
 async fn run_slashed_exit(
@@ -544,7 +544,7 @@ async fn run_slashed_exit(
     }
     let after = context.snapshot().await.ok();
 
-    Ok(context.report(
+    context.report(
         "slashed-exit",
         tx_hashes,
         Some(before),
@@ -555,7 +555,7 @@ async fn run_slashed_exit(
             "advancedSeconds": advanced_seconds,
             "forced": force,
         }),
-    )?)
+    )
 }
 
 async fn run_jail_no_rewards(
@@ -582,7 +582,7 @@ async fn run_jail_no_rewards(
     }
     let after = context.snapshot().await?;
 
-    Ok(context.report(
+    context.report(
         "jail-no-rewards",
         tx_hashes,
         Some(before),
@@ -594,7 +594,7 @@ async fn run_jail_no_rewards(
             "pendingRewardsAfterWei": rewards_after.to_string(),
             "forced": force,
         }),
-    )?)
+    )
 }
 
 async fn run_distribute_rewards(runtime: &LoadedRuntime) -> Result<ScenarioReport> {
@@ -1186,29 +1186,6 @@ fn validator_status_label(status: u8) -> &'static str {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::validate_slashable_status;
-
-    #[test]
-    fn validate_slashable_status_allows_active_validator() {
-        validate_slashable_status("Active", "alice", false).unwrap();
-    }
-
-    #[test]
-    fn validate_slashable_status_allows_forced_non_active_validator() {
-        validate_slashable_status("Inactive", "alice", true).unwrap();
-    }
-
-    #[test]
-    fn validate_slashable_status_rejects_non_active_validator_without_force() {
-        let error = validate_slashable_status("Inactive", "alice", false).unwrap_err();
-        assert!(error
-            .to_string()
-            .contains("refusing to slash a non-active validator without --force"));
-    }
-}
-
 async fn ensure_contract_code(
     provider: &DynProvider,
     address: Address,
@@ -1232,4 +1209,27 @@ async fn ensure_contract_code(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_slashable_status;
+
+    #[test]
+    fn validate_slashable_status_allows_active_validator() {
+        validate_slashable_status("Active", "alice", false).unwrap();
+    }
+
+    #[test]
+    fn validate_slashable_status_allows_forced_non_active_validator() {
+        validate_slashable_status("Inactive", "alice", true).unwrap();
+    }
+
+    #[test]
+    fn validate_slashable_status_rejects_non_active_validator_without_force() {
+        let error = validate_slashable_status("Inactive", "alice", false).unwrap_err();
+        assert!(error
+            .to_string()
+            .contains("refusing to slash a non-active validator without --force"));
+    }
 }

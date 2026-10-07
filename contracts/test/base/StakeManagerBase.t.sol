@@ -39,11 +39,11 @@ abstract contract StakeManagerBaseTest is BridgeBaseTest, IStakeManagerTypes {
     StakeManager public stakeManagerB;
     ValidatorManager public validatorManagerB;
 
-    StakeManagerConfig public testConfigA;
-    StakeManagerConfig public testConfigB;
+    StakeManagerConfig internal testConfigA;
+    StakeManagerConfig internal testConfigB;
 
-    bytes32 public testConfigVersionA;
-    bytes32 public testConfigVersionB;
+    bytes32 internal testConfigVersionA;
+    bytes32 internal testConfigVersionB;
 
     struct BlsTestData {
         string privateKey;

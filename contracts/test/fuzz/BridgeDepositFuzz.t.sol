@@ -19,6 +19,7 @@ contract BridgeDepositFuzzTest is BridgeBaseTest {
 
         uint256 counterBefore = CHAINA.DEPOSIT_COUNTER();
         uint256 userBefore = TOKEN_CHAINA.balanceOf(alice);
+        uint256 bridgeBefore = TOKEN_CHAINA.balanceOf(address(CHAINA));
 
         vm.startPrank(alice);
         TOKEN_CHAINA.approve(address(CHAINA), amount);
@@ -34,6 +35,7 @@ contract BridgeDepositFuzzTest is BridgeBaseTest {
 
         assertEq(CHAINA.DEPOSIT_COUNTER(), counterBefore + 1);
         assertEq(TOKEN_CHAINA.balanceOf(alice), userBefore - amount);
+        assertEq(TOKEN_CHAINA.balanceOf(address(CHAINA)), bridgeBefore + amount);
     }
 
     function testFuzz_DepositSameChainAlwaysReverts(uint96 rawAmount) public {

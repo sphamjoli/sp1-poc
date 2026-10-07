@@ -10,9 +10,7 @@ runs:
     - name: Install pinned SP1 compiler
       shell: bash
       run: |
-        curl -fsSL https://raw.githubusercontent.com/succinctlabs/sp1/3209d5454e8cddb635dd8425e3807a60e8dac395/sp1up/sp1up -o /tmp/sp1up
-        echo '5865c5d94d7140083005738f078153b666af192501428d45bb5e27a57ef5ef87  /tmp/sp1up' | sha256sum -c -
-        bash /tmp/sp1up --version 5.2.1
+        bash scripts/install-sp1.sh
         echo "$HOME/.sp1/bin" >> "$GITHUB_PATH"
     - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09
       with:

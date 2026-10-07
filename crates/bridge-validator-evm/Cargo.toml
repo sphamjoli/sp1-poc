@@ -25,3 +25,6 @@ chain-manager = { workspace = true }
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+proptest = "=1.8.0"

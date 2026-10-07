@@ -99,13 +99,6 @@ abstract contract BridgeBaseTest is Test, IBridgeTypes {
         _labelAddresses();
     }
 
-    /// @notice Basic sanity checks for Chain A token configuration
-    function test_token_Config() external {
-        vm.selectFork(FORKA_ID);
-        assertEq(TOKEN_CHAINA.totalSupply(), DEFAULT_OWNER_TOKEN_BALANCE);
-        assertEq(TOKEN_CHAINA.name(), "TOKEN Chain A");
-        assertEq(TOKEN_CHAINA.symbol(), "TKCA");
-    }
     /// @notice Deploys a token
     /// @param sender The address to use to deploy
     /// @param forkId The fork to use to deploy

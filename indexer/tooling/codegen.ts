@@ -40,6 +40,7 @@ function runPnpm(argumentsList: string[], cwd: string): void {
   const result = spawnSync("pnpm", argumentsList, {
     cwd,
     shell: false,
+    env: { ...process.env, CI: "true" },
     stdio: "inherit",
     timeout: 600_000,
   });

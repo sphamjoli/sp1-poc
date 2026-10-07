@@ -16,7 +16,7 @@ Fast claims depend on the validator set. A proof checks the program's statement 
 
 ## Run locally
 
-Use Rust 1.92.0 (pinned in `rust-toolchain`), SP1 5.2.1 and Foundry 1.3.5 (`forge`, `cast`, `anvil`), Docker Compose, and Bun 1.4.2 (the latest stable release verified for this change) and Node.js 22 or later for tools that require Node. The host-managed alternative also needs `screen`. Install SP1 through its [official installation instructions](https://docs.succinct.xyz/docs/sp1/getting-started/install); the workspace uses SP1 5.2.1.
+Use Rust 1.92.0 (pinned in `rust-toolchain`), SP1 5.2.4 and Foundry 1.3.5 (`forge`, `cast`, `anvil`), Docker Compose, and Bun 1.4.2 (the latest stable release verified for this change) and Node.js 22 or later for tools that require Node. The host-managed alternative also needs `screen`. Install SP1 through its [official installation instructions](https://docs.succinct.xyz/docs/sp1/getting-started/install); the workspace uses SP1 5.2.4.
 
 ```bash
 git clone --recurse-submodules https://github.com/sphamjoli/sp1-poc.git
