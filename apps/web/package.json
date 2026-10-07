@@ -20,7 +20,7 @@
     "@playwright/test": "^1.55.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^24.1.0",
-    "@vitejs/plugin-vue": "^6.0.1",
+    "@vitejs/plugin-vue": "^6.0.9",
     "@vue/test-utils": "^2.4.6",
     "jsdom": "^26.1.0",
     "postcss": "8.5.29",
