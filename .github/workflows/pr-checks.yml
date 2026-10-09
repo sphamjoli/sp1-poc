@@ -167,7 +167,7 @@ jobs:
       - name: Read applied labels
         id: run
         if: always()
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           # github-script writes the script's return value to the `result`
           # output, so return the labels rather than setting `result` directly.
@@ -193,7 +193,7 @@ jobs:
         # requests, so the write fails there. The checks above still gate the
         # pull request; only the comment is lost.
         continue-on-error: true
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           SCAN_RESULT: ${{ needs.scan.outputs.result }}
           TITLE_RESULT: ${{ needs.title.outputs.result }}
