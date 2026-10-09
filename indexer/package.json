@@ -18,7 +18,7 @@
     "@types/node": "20.8.8",
     "ts-mocha": "11.1.0",
     "typescript": "5.2.2",
-    "chai": "4.3.10",
+    "chai": "6.3.0",
     "mocha": "11.8.0",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0"
