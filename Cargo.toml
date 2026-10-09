@@ -43,7 +43,7 @@ alloy-provider = { version = "1.1.2" }
 alloy-rpc-types = { version = "1.1.2" }
 alloy-network = { version = "1.1.2" }
 alloy-node-bindings = { version = "1.1.2" }
-alloy-signer = { version = "1.1.2" }
+alloy-signer = { version = "2.0.4" }
 alloy-signer-local = { version = "1.1.2" }
 alloy-trie = { version = "0.9.1" }
 alloy-rlp = { version = "0.3.12" }
