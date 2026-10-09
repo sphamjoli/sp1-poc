@@ -17,7 +17,7 @@
     "@types/mocha": "10.0.6",
     "@types/node": "20.8.8",
     "ts-mocha": "11.1.0",
-    "typescript": "5.2.2",
+    "typescript": "7.0.2",
     "chai": "4.3.10",
     "mocha": "11.8.0",
     "ts-node": "10.9.2",
