@@ -30,8 +30,8 @@ importers:
         specifier: 10.0.6
         version: 10.0.6
       '@types/node':
-        specifier: 20.8.8
-        version: 20.8.8
+        specifier: 26.6.4
+        version: 26.6.4
       chai:
         specifier: 4.3.10
         version: 4.3.10
@@ -40,10 +40,10 @@ importers:
         version: 11.8.0
       ts-mocha:
         specifier: 11.1.0
-        version: 11.1.0(mocha@11.8.0)(ts-node@10.9.2(@types/node@20.8.8)(typescript@5.2.2))(tsconfig-paths@4.2.0)
+        version: 11.1.0(mocha@11.8.0)(ts-node@10.9.2(@types/node@26.6.4)(typescript@5.2.2))(tsconfig-paths@4.2.0)
       ts-node:
         specifier: 10.9.2
-        version: 10.9.2(@types/node@20.8.8)(typescript@5.2.2)
+        version: 10.9.2(@types/node@26.6.4)(typescript@5.2.2)
       tsconfig-paths:
         specifier: 4.2.0
         version: 4.2.0
@@ -81,18 +81,21 @@ packages:
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@envio-dev/hypersync-client-linux-x64-gnu@0.6.5':
     resolution: {integrity: sha512-DUDY19T2O+ciniP8RHWEv6ziaCdVkkVVLhfXiovpLy+oR1K/+h7osUHD1HCPolibaU3V2EDpqTDhKBtvPXUGaQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@envio-dev/hypersync-client-linux-x64-musl@0.6.5':
     resolution: {integrity: sha512-VolsHvPrk5PAdHN0ht1iowwXz7bwJO0L5qDuw3eSKF4qHuAzlwImB1CRhJrMIaE8McsDnN6fSlqDeTPRmzS/Ug==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@envio-dev/hypersync-client-win32-x64-msvc@0.6.5':
     resolution: {integrity: sha512-D+bkkWbCsbgaTrhyVdXHysKUCVzFpkWoxmaHnm2anad7+yKKfx15afYirtZMTKc7CLkYqganghN4QsBsEHl3Iw==}
@@ -160,8 +163,8 @@ packages:
   '@types/mocha@10.0.6':
     resolution: {integrity: sha512-dJvrYWxP/UcXm36Qn36fxhUKu8A/xMRXVT2cliFF1Z7UA9liG5Psj3ezNSZw+5puH2czDXRLcXQxf8JbJt0ejg==}
 
-  '@types/node@20.8.8':
-    resolution: {integrity: sha512-YRsdVxq6OaLfmR9Hy816IMp33xOBjfyOgUd77ehqg96CFywxAPbDbXvAsuN2KVg2HOT8Eh6uAfU+l4WffwPVrQ==}
+  '@types/node@26.6.4':
+    resolution: {integrity: sha512-ldVPDCzj7fsaGZrLB0NuHuTvJcsNasysBAqMolr/cgxrLd1xbqxIr3XJiPnHHJUCxj5sNF1vnRj9aWnrVh5Jcg==}
 
   abitype@1.0.5:
     resolution: {integrity: sha512-YzDhti7cjlfaBhHutMaboYB21Ha3rXR9QTkNJFzYC4kC8YclaiwPBBBJY8ejFdu2wnJeZCVZSMlQJ7fi8S6hsw==}
@@ -563,6 +566,7 @@ packages:
   prom-client@15.0.0:
     resolution: {integrity: sha512-UocpgIrKyA2TKLVZDSfm8rGkL13C19YrQBAiG3xo3aDFWcHedxRxI3z+cIcucoxpSO0h5lff5iv/SXoxyeopeA==}
     engines: {node: ^16 || ^18 || >=20}
+    deprecated: prom-client has been replaced by @prometheus-io/client
 
   pump@3.0.3:
     resolution: {integrity: sha512-todwxLMY7/heScKmntwQG8CXVkWUOdYxIvY2s0VWAAMh/nd8SoYiRaKjlr7+iCs984f2P8zvrfWcDDYVb73NfA==}
@@ -716,8 +720,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  undici-types@5.25.3:
-    resolution: {integrity: sha512-Ga1jfYwRn7+cP9v8auvEXN1rX3sWqlayd4HP7OKk4mZWylEmu3KzXDUGrQUN6Ol7qo1gPvB2e5gX6udnyEPgdA==}
+  undici-types@8.9.0:
+    resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
@@ -880,9 +884,9 @@ snapshots:
 
   '@types/mocha@10.0.6': {}
 
-  '@types/node@20.8.8':
+  '@types/node@26.6.4':
     dependencies:
-      undici-types: 5.25.3
+      undici-types: 8.9.0
 
   abitype@1.0.5(typescript@5.2.2):
     optionalDependencies:
@@ -1373,21 +1377,21 @@ snapshots:
     dependencies:
       real-require: 0.2.0
 
-  ts-mocha@11.1.0(mocha@11.8.0)(ts-node@10.9.2(@types/node@20.8.8)(typescript@5.2.2))(tsconfig-paths@4.2.0):
+  ts-mocha@11.1.0(mocha@11.8.0)(ts-node@10.9.2(@types/node@26.6.4)(typescript@5.2.2))(tsconfig-paths@4.2.0):
     dependencies:
       mocha: 11.8.0
-      ts-node: 10.9.2(@types/node@20.8.8)(typescript@5.2.2)
+      ts-node: 10.9.2(@types/node@26.6.4)(typescript@5.2.2)
     optionalDependencies:
       tsconfig-paths: 4.2.0
 
-  ts-node@10.9.2(@types/node@20.8.8)(typescript@5.2.2):
+  ts-node@10.9.2(@types/node@26.6.4)(typescript@5.2.2):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.13
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
-      '@types/node': 20.8.8
+      '@types/node': 26.6.4
       acorn: 8.19.0
       acorn-walk: 8.3.5
       arg: 4.1.3
@@ -1408,7 +1412,7 @@ snapshots:
 
   typescript@5.2.2: {}
 
-  undici-types@5.25.3: {}
+  undici-types@8.9.0: {}
 
   util-deprecate@1.0.2: {}
 
