@@ -24,7 +24,7 @@
     "tsconfig-paths": "4.2.0"
   },
   "dependencies": {
-    "envio": "2.25.0"
+    "envio": "3.14.0"
   },
   "optionalDependencies": {
     "generated": "./generated"
