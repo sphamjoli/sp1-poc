@@ -16,7 +16,7 @@
     "generate:bridgeEvents": "bun index.ts"
   },
   "devDependencies": {
-    "@openzeppelin/upgrades-core": "1.46.0",
+    "@openzeppelin/upgrades-core": "1.48.0",
     "@prb/math": "^4.1.0",
     "@solarity/solidity-lib": "^3.2.0",
     "@types/node": "^24.1.0",
